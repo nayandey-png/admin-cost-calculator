@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMI admin cost calculator</title>
+<meta name="description" content="Estimate what administering private medical insurance work costs your clinic, and what changes with Effra.">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>PMI admin cost calculator</h1>
+    <p>Work out what insured-patient admin costs your clinic today, and what changes with Effra. Nine quick questions and a sense check.</p>
+    <p class="privacy">Don&rsquo;t enter patient-identifiable information. Everything stays in this browser.</p>
+  </header>
+
+  <main>
+    <section id="survey" aria-label="Survey"></section>
+
+    <section id="results" aria-label="Results" hidden>
+      <div id="results-output"></div>
+      <div id="details-host"></div>
+      <div class="button-row no-print">
+        <button type="button" class="btn btn--secondary" data-action="print">Print results</button>
+        <button type="button" class="btn btn--secondary" data-action="csv">Export CSV</button>
+        <button type="button" class="btn btn--secondary" data-action="save">Save</button>
+        <button type="button" class="btn btn--quiet" data-action="reset">Reset</button>
+        <button type="button" class="btn btn--quiet" data-action="clear">Clear example data</button>
+        <span class="status" role="status"></span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Estimates for planning only. Not accounting, tax or employment advice. Employer NI (15% above &pound;5,000) and pension (3% of qualifying earnings) are 2026/27 defaults and can change.</p>
+  </footer>
+</div>
+<script type="module" src="ui.js"></script>
+</body>
+</html>

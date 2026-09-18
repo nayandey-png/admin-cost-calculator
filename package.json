@@ -1,0 +1,12 @@
+{
+  "name": "pmi-admin-cost-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PMI admin cost calculator for UK clinics — self-contained single-file build.",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build": "node build.js",
+    "prepare-dist": "node build.js"
+  }
+}

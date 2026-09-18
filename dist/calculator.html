@@ -1,0 +1,2564 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMI admin cost calculator</title>
+<meta name="description" content="Estimate what administering private medical insurance work costs your clinic, and what changes with Effra.">
+<meta name="robots" content="noindex">
+<style>
+/* styles.css — all colours as custom properties so Effra brand colours drop in. */
+
+:root {
+  --colour-bg: #ffffff;
+  --colour-surface: #ffffff;
+  --colour-surface-muted: #f4f6fa;
+  --colour-border: #d3d9e4;
+  --colour-border-strong: #9aa5b8;
+
+  --colour-heading: #12274a;
+  --colour-text: #24303f;
+  --colour-text-muted: #55606f;
+
+  --colour-accent: #1f5fa8;
+  --colour-accent-dark: #17497f;
+  --colour-accent-soft: #e8f0fa;
+
+  --colour-success: #14654a;
+  --colour-success-soft: #e4f4ec;
+  --colour-success-border: #9ed0ba;
+
+  --colour-warning-soft: #fdf3e2;
+  --colour-warning-border: #c98a17;
+  --colour-error: #a32020;
+  --colour-error-soft: #fdeceb;
+
+  --colour-chart-current: #606f86;
+  --colour-chart-effra: #1f5fa8;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 2px rgba(18, 39, 74, 0.08), 0 4px 12px rgba(18, 39, 74, 0.06);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --gap: 1rem;
+  --max-width: 60rem;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: 1rem;
+  background: var(--colour-bg);
+  color: var(--colour-text);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.55;
+  overflow-x: hidden;
+}
+
+.app { max-width: var(--max-width); margin: 0 auto; }
+
+h1, h2, h3, h4 { color: var(--colour-heading); line-height: 1.25; margin: 0 0 0.5rem; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.3rem; }
+h3 { font-size: 1.1rem; }
+h4 { font-size: 1rem; }
+p { margin: 0 0 0.75rem; }
+p:last-child { margin-bottom: 0; }
+
+a { color: var(--colour-accent-dark); }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--colour-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ---------- cards ---------- */
+
+.card {
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow);
+}
+.card--success { border-color: var(--colour-success-border); background: var(--colour-success-soft); }
+.card__lead { color: var(--colour-text-muted); margin-bottom: 1rem; }
+
+/* ---------- buttons ---------- */
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-accent);
+  background: var(--colour-accent);
+  color: #fff;
+  cursor: pointer;
+  min-height: 44px;
+}
+.btn:hover { background: var(--colour-accent-dark); border-color: var(--colour-accent-dark); }
+.btn--secondary { background: #fff; color: var(--colour-accent-dark); }
+.btn--secondary:hover { background: var(--colour-accent-soft); }
+.btn--quiet {
+  background: transparent;
+  border-color: var(--colour-border-strong);
+  color: var(--colour-text);
+  font-weight: 500;
+}
+.btn--quiet:hover { background: var(--colour-surface-muted); }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+.button-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.button-row--split { justify-content: space-between; }
+
+/* ---------- survey ---------- */
+
+.progress { margin-bottom: 1.25rem; }
+.progress__label {
+  display: flex; justify-content: space-between; gap: 0.5rem;
+  font-size: 0.9rem; color: var(--colour-text-muted); margin-bottom: 0.35rem;
+}
+.progress__track {
+  height: 8px; background: var(--colour-surface-muted);
+  border: 1px solid var(--colour-border); border-radius: 999px; overflow: hidden;
+}
+.progress__bar { height: 100%; background: var(--colour-accent); transition: width 0.2s ease; }
+
+.question__helper { color: var(--colour-text-muted); margin-bottom: 1rem; }
+
+.field { margin-bottom: 1rem; }
+.field > label, .field__label {
+  display: block; font-weight: 600; margin-bottom: 0.3rem; color: var(--colour-heading);
+}
+.field__hint { display: block; font-weight: 400; font-size: 0.9rem; color: var(--colour-text-muted); }
+
+input[type="text"], input[type="number"], select {
+  font: inherit;
+  width: 100%;
+  max-width: 22rem;
+  padding: 0.55rem 0.65rem;
+  min-height: 44px;
+  border: 1px solid var(--colour-border-strong);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--colour-text);
+}
+input[aria-invalid="true"] { border-color: var(--colour-error); border-width: 2px; }
+
+input[type="range"] { width: 100%; max-width: 26rem; min-height: 44px; }
+
+.choice-list { display: grid; gap: 0.5rem; margin: 0; padding: 0; border: 0; }
+.choice-list--inline { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+
+.choice {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  border: 1px solid var(--colour-border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.75rem;
+  background: #fff;
+  cursor: pointer;
+  min-height: 44px;
+}
+.choice:hover { background: var(--colour-accent-soft); }
+.choice input { margin: 0.2rem 0 0; flex: none; width: 1.1rem; height: 1.1rem; min-height: 0; }
+.choice--selected { border-color: var(--colour-accent); background: var(--colour-accent-soft); box-shadow: inset 0 0 0 1px var(--colour-accent); }
+
+fieldset { border: 0; margin: 0 0 1rem; padding: 0; }
+legend { font-weight: 600; color: var(--colour-heading); padding: 0; margin-bottom: 0.4rem; }
+
+.role-settings {
+  margin: 0.4rem 0 0.75rem;
+  padding: 0.75rem;
+  border: 1px dashed var(--colour-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface-muted);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+.role-settings .field { margin: 0; }
+.role-settings input { max-width: 100%; }
+
+.error {
+  color: var(--colour-error);
+  background: var(--colour-error-soft);
+  border-left: 4px solid var(--colour-error);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  margin: 0.5rem 0;
+  font-weight: 600;
+}
+.error:empty { display: none; }
+
+.note {
+  background: var(--colour-warning-soft);
+  border-left: 4px solid var(--colour-warning-border);
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  margin: 0.75rem 0;
+}
+
+.sense-check { font-size: 1.1rem; }
+.sense-check strong { color: var(--colour-heading); }
+.slider-scale {
+  display: flex; justify-content: space-between;
+  font-size: 0.85rem; color: var(--colour-text-muted); max-width: 26rem;
+}
+
+/* ---------- tooltips ---------- */
+
+.tip-wrap { display: inline-flex; align-items: center; gap: 0.3rem; }
+.tip-btn {
+  font: inherit; font-size: 0.8rem; font-weight: 700; line-height: 1;
+  width: 1.5rem; height: 1.5rem; min-height: 0;
+  border-radius: 50%;
+  border: 1px solid var(--colour-accent);
+  background: #fff; color: var(--colour-accent-dark);
+  cursor: pointer; flex: none;
+}
+.tip-btn:hover { background: var(--colour-accent-soft); }
+.tip-body {
+  margin: 0.4rem 0 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--colour-accent-soft);
+  border-left: 4px solid var(--colour-accent);
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  max-width: 34rem;
+}
+
+/* ---------- results ---------- */
+
+.summary-text { font-size: 1.12rem; }
+
+.tiles { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+.tile {
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius);
+  padding: 0.9rem;
+  background: var(--colour-surface);
+}
+.tile--success { border-color: var(--colour-success-border); background: var(--colour-success-soft); }
+.tile__label { font-size: 0.9rem; color: var(--colour-text-muted); display: block; }
+.tile__value {
+  font-size: 1.65rem; font-weight: 700; color: var(--colour-heading);
+  display: block; line-height: 1.2; margin: 0.15rem 0;
+  font-variant-numeric: tabular-nums;
+}
+.tile--success .tile__value { color: var(--colour-success); }
+.tile__note { font-size: 0.85rem; color: var(--colour-text-muted); display: block; }
+.tile__value--negative { color: var(--colour-error); }
+
+/* ---------- charts ---------- */
+
+.chart { margin: 1.25rem 0; }
+.chart__title { font-weight: 600; color: var(--colour-heading); margin-bottom: 0.15rem; }
+.chart__legend { display: flex; flex-wrap: wrap; gap: 0.9rem; font-size: 0.88rem; margin-bottom: 0.6rem; }
+.chart__key { display: inline-flex; align-items: center; gap: 0.35rem; }
+.chart__swatch { width: 0.9rem; height: 0.9rem; border-radius: 2px; border: 1px solid rgba(0,0,0,0.25); flex: none; }
+.chart__swatch--current { background: var(--colour-chart-current); }
+.chart__swatch--effra { background: var(--colour-chart-effra); }
+
+.chart__group { margin-bottom: 0.85rem; }
+.chart__group-label { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.2rem; }
+.chart__row { display: grid; grid-template-columns: 6.5rem 1fr; gap: 0.5rem; align-items: center; margin-bottom: 0.25rem; }
+.chart--labels-wide .chart__row { grid-template-columns: 14rem 1fr; margin-bottom: 0.4rem; }
+.chart--labels-wide .chart__row-label { color: var(--colour-text); }
+.chart__row-label { font-size: 0.85rem; color: var(--colour-text-muted); }
+.chart__track {
+  background: var(--colour-surface-muted);
+  border-radius: 3px;
+  display: flex; align-items: center;
+  min-height: 1.35rem;
+}
+.chart__bar {
+  flex: none;
+  height: 1.35rem;
+  border-radius: 3px;
+  min-width: 2px;
+  display: flex; align-items: center;
+  background: var(--colour-chart-current);
+}
+.chart__bar--effra { background: var(--colour-chart-effra); }
+.chart__bar--plain { background: var(--colour-accent); }
+.chart__value {
+  flex: none;
+  font-size: 0.85rem; font-variant-numeric: tabular-nums;
+  padding: 0 0.4rem; white-space: nowrap; color: var(--colour-text);
+}
+.chart__bar .chart__value { color: #fff; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .chart__bar { transition: width 0.25s ease; }
+}
+
+/* ---------- tables ---------- */
+
+/* `position: relative` keeps the visually hidden labels inside the scroller;
+   without it they sit at their static position and widen the whole page. */
+.table-scroll { position: relative; max-width: 100%; overflow-x: auto; margin-bottom: 1rem; }
+.table-scroll:focus-visible { outline: 3px solid var(--colour-accent); outline-offset: 2px; }
+
+.data-table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.95rem; }
+.data-table caption { text-align: left; font-weight: 600; color: var(--colour-heading); margin-bottom: 0.4rem; }
+.data-table th, .data-table td {
+  text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--colour-border); vertical-align: top;
+}
+.data-table th { color: var(--colour-heading); }
+.data-table input, .data-table select { max-width: 100%; min-width: 5rem; }
+
+/* ---------- released time ---------- */
+
+.role-block {
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius);
+  padding: 0.9rem;
+  margin-bottom: 0.85rem;
+  background: var(--colour-surface);
+}
+.role-block__head { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: space-between; align-items: baseline; }
+.role-block__hours { font-weight: 700; color: var(--colour-success); }
+.role-block__none { color: var(--colour-text-muted); margin: 0.3rem 0 0; }
+.role-block__helper { font-size: 0.9rem; color: var(--colour-text-muted); margin: 0.3rem 0 0; }
+.cash-total { font-size: 1.15rem; font-weight: 700; color: var(--colour-heading); margin-top: 1rem; }
+.cash-excess { color: var(--colour-text-muted); font-size: 0.92rem; margin-top: 0.25rem; }
+
+details { border: 1px solid var(--colour-border); border-radius: var(--radius); padding: 0.75rem 1rem; margin-bottom: 1.25rem; background: var(--colour-surface); }
+details > summary { font-weight: 600; color: var(--colour-heading); cursor: pointer; min-height: 32px; }
+details[open] > summary { margin-bottom: 0.75rem; }
+
+.privacy {
+  font-size: 0.92rem; color: var(--colour-text-muted);
+  background: var(--colour-surface-muted);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem; margin-bottom: 1rem;
+}
+.footer { font-size: 0.85rem; color: var(--colour-text-muted); border-top: 1px solid var(--colour-border); padding-top: 0.85rem; margin-top: 1.5rem; }
+
+.status { min-height: 1.5rem; font-size: 0.92rem; color: var(--colour-success); font-weight: 600; }
+
+/* ---------- mobile: tables become stacked cards ---------- */
+
+@media (max-width: 640px) {
+  body { padding: 0.75rem; }
+  h1 { font-size: 1.35rem; }
+  .card { padding: 1rem; }
+  .chart__row { grid-template-columns: 4.5rem 1fr; }
+  .chart--labels-wide .chart__row { grid-template-columns: 1fr; gap: 0.1rem; }
+
+  .table-scroll { overflow-x: visible; }
+  .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; }
+  .data-table thead { display: none; }
+  .data-table tr {
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+  }
+  .data-table td { border-bottom: 0; padding: 0.35rem 0; }
+  .data-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: 600;
+    color: var(--colour-heading);
+    font-size: 0.85rem;
+  }
+  .tile__value { font-size: 1.4rem; }
+}
+
+/* ---------- print ---------- */
+
+@media print {
+  :root { --shadow: none; }
+  body { padding: 0; font-size: 11pt; color: #000; }
+  .no-print, .privacy, #survey, .button-row, .tip-btn, .status { display: none !important; }
+  .card, .role-block, details, .tile { break-inside: avoid; border: 1px solid #666; box-shadow: none; background: #fff !important; }
+  .tile--success, .card--success { background: #fff !important; }
+  .tile__value, .tile--success .tile__value, h1, h2, h3 { color: #000; }
+  details { display: block; }
+  details > summary { display: none; }
+  /* Bars keep their shape via borders, so they stay legible without colour. */
+  .chart { break-inside: avoid; }
+  .chart__track { background: #fff; }
+  .chart__bar { background: #fff !important; border: 1pt solid #000; }
+  .chart__bar--effra { background: repeating-linear-gradient(45deg, #000, #000 1pt, #fff 1pt, #fff 3pt) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* A white chip keeps the label readable over the hatched fill. */
+  .chart__value { color: #000; }
+  .chart__bar .chart__value { color: #000; background: #fff; border: 1pt solid #000; margin: 0 2pt; }
+  .chart__swatch { border: 1pt solid #000; background: #fff !important; }
+  .chart__swatch--effra { background: repeating-linear-gradient(45deg, #000, #000 1pt, #fff 1pt, #fff 3pt) !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>PMI admin cost calculator</h1>
+    <p>Work out what insured-patient admin costs your clinic today, and what changes with Effra. Nine quick questions and a sense check.</p>
+    <p class="privacy">Don&rsquo;t enter patient-identifiable information. Everything stays in this browser.</p>
+  </header>
+
+  <main>
+    <section id="survey" aria-label="Survey"></section>
+
+    <section id="results" aria-label="Results" hidden>
+      <div id="results-output"></div>
+      <div id="details-host"></div>
+      <div class="button-row no-print">
+        <button type="button" class="btn btn--secondary" data-action="print">Print results</button>
+        <button type="button" class="btn btn--secondary" data-action="csv">Export CSV</button>
+        <button type="button" class="btn btn--secondary" data-action="save">Save</button>
+        <button type="button" class="btn btn--quiet" data-action="reset">Reset</button>
+        <button type="button" class="btn btn--quiet" data-action="clear">Clear example data</button>
+        <span class="status" role="status"></span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Estimates for planning only. Not accounting, tax or employment advice. Employer NI (15% above &pound;5,000) and pension (3% of qualifying earnings) are 2026/27 defaults and can change.</p>
+  </footer>
+</div>
+<script>
+(function () {
+'use strict';
+/* ---- defaults.js ---- */
+/* defaults.js — role defaults, activity defaults, survey mappings, Effra benchmarks.
+   Pure data plus a couple of tiny lookup helpers. No DOM. */
+
+const CONSTANTS = {
+  niRate: 0.15,
+  niThreshold: 5000,
+  pensionRate: 0.03,
+  pensionLower: 6240,
+  pensionUpper: 50270,
+  weeksPerYear: 52,
+  leaveWeeks: 5.6,
+  sicknessRate: 0.02,
+  sessionsPerCourse: 5,
+  monthsPerYear: 12,
+  daysPerYear: 365
+};
+
+const ROLE_DEFAULTS = [
+  { key: 'rec', label: 'Receptionist', salary: 24500, weeklyHours: 37.5, hourlyOverride: null },
+  { key: 'adm', label: 'Admin or finance assistant', salary: 27000, weeklyHours: 37.5, hourlyOverride: null },
+  { key: 'pm', label: 'Practice manager', salary: 36000, weeklyHours: 37.5, hourlyOverride: null },
+  { key: 'own', label: 'Clinic owner', salary: 0, weeklyHours: 40, hourlyOverride: 60 },
+  { key: 'cli', label: 'Clinician', salary: 40000, weeklyHours: 37.5, hourlyOverride: null }
+];
+
+const CLINICIAN_ROLE_KEY = 'cli';
+const DEFAULT_BILLING_ROLE_KEY = 'rec';
+
+function roleDefault(key) {
+  return ROLE_DEFAULTS.find((r) => r.key === key) || null;
+}
+
+const INSURERS = [
+  { key: 'bupa', label: 'Bupa' },
+  { key: 'axa', label: 'AXA Health' },
+  { key: 'aviva', label: 'Aviva' },
+  { key: 'vitality', label: 'Vitality' },
+  { key: 'wpa', label: 'WPA' },
+  { key: 'other', label: 'Other' }
+];
+
+function insurerLabel(key) {
+  const found = INSURERS.find((i) => i.key === key);
+  return found ? found.label : key;
+}
+
+/* ---------- Survey answer mappings (section 3.1) ---------- */
+
+const DAYS_TO_PAY_OPTIONS = [
+  { key: 'under2w', label: 'Under 2 weeks', days: 10 },
+  { key: '2to4w', label: '2–4 weeks', days: 21 },
+  { key: '1to2m', label: '1–2 months', days: 45 },
+  { key: 'over2m', label: 'Over 2 months', days: 75 },
+  { key: 'notsure', label: 'Not sure', days: 30 }
+];
+
+const REJECTION_OPTIONS = [
+  { key: 'rarely', label: 'Rarely', pct: 2 },
+  { key: 'sometimes', label: 'Sometimes', pct: 5 },
+  { key: 'often', label: 'Often', pct: 10 },
+  { key: 'veryoften', label: 'Very often', pct: 20 },
+  { key: 'notsure', label: 'Not sure', pct: 5 }
+];
+
+const WRITE_OFF_OPTIONS = [
+  { key: 'none', label: 'None', annual: 0 },
+  { key: 'under1k', label: 'Under £1k', annual: 500 },
+  { key: '1kto5k', label: '£1k–£5k', annual: 3000 },
+  { key: 'over5k', label: 'Over £5k', annual: 7500 },
+  { key: 'notsure', label: 'Not sure', annual: 1000 }
+];
+
+function daysToPayFor(key) {
+  const o = DAYS_TO_PAY_OPTIONS.find((x) => x.key === key);
+  return o ? o.days : 30;
+}
+
+function rejectionPctFor(key) {
+  const o = REJECTION_OPTIONS.find((x) => x.key === key);
+  return o ? o.pct : 5;
+}
+
+function writeOffsAnnualFor(key) {
+  const o = WRITE_OFF_OPTIONS.find((x) => x.key === key);
+  return o ? o.annual : 1000;
+}
+
+/* ---------- Activity defaults (section 3.3) ----------
+   group:    'B' billing and payments | 'F' front-end and clinical
+   roleSlot: 'front' | 'routine' | 'exception' | 'clinician'
+   kind:     'R' routine | 'E' exception
+   type:     'rate' | 'batch'
+   basis:    'courses' | 'appointments' | 'invoices' | 'rejected'            */
+
+const ACTIVITY_DEFAULTS = [
+  { id: 'details', label: 'Collecting patient and policy details', group: 'F', roleSlot: 'front', kind: 'R', type: 'rate', basis: 'courses', incidence: 100, followUps: 1, minutes: 8 },
+  { id: 'auth', label: 'Checking authorisation', group: 'F', roleSlot: 'front', kind: 'R', type: 'rate', basis: 'courses', incidence: 100, followUps: 1, minutes: 10 },
+  { id: 'recognition', label: 'Checking clinician and clinic recognition', group: 'F', roleSlot: 'front', kind: 'R', type: 'rate', basis: 'courses', incidence: 20, followUps: 1, minutes: 5 },
+  { id: 'sessions', label: 'Monitoring authorised sessions', group: 'F', roleSlot: 'front', kind: 'R', type: 'rate', basis: 'appointments', incidence: 100, followUps: 1, minutes: 1 },
+  { id: 'reports', label: 'Preparing clinical reports', group: 'F', roleSlot: 'clinician', kind: 'R', type: 'rate', basis: 'courses', incidence: 60, followUps: 1, minutes: 20 },
+  { id: 'reauth', label: 'Requesting further authorisation', group: 'F', roleSlot: 'front', kind: 'R', type: 'rate', basis: 'courses', incidence: 40, followUps: 1, minutes: 10 },
+
+  { id: 'prepinv', label: 'Preparing invoices', group: 'B', roleSlot: 'routine', kind: 'R', type: 'rate', basis: 'invoices', incidence: 100, followUps: 1, minutes: 0.3 },
+  { id: 'submit', label: 'Submitting claims', group: 'B', roleSlot: 'routine', kind: 'R', type: 'rate', basis: 'invoices', incidence: 100, followUps: 1, minutes: 0.25 },
+  { id: 'received', label: 'Checking whether claims were received', group: 'B', roleSlot: 'routine', kind: 'R', type: 'rate', basis: 'invoices', incidence: 5, followUps: 1, minutes: 1 },
+  { id: 'correct', label: 'Correcting rejected claims', group: 'B', roleSlot: 'exception', kind: 'E', type: 'rate', basis: 'rejected', incidence: 100, followUps: 1, minutes: 8 },
+  { id: 'resubmit', label: 'Resubmitting claims', group: 'B', roleSlot: 'exception', kind: 'E', type: 'rate', basis: 'rejected', incidence: 100, followUps: 1, minutes: 3 },
+  { id: 'shortfalls', label: 'Investigating shortfalls', group: 'B', roleSlot: 'exception', kind: 'E', type: 'rate', basis: 'invoices', incidence: 4, followUps: 1, minutes: 5 },
+  { id: 'disputes', label: 'Raising insurer disputes', group: 'B', roleSlot: 'exception', kind: 'E', type: 'rate', basis: 'rejected', incidence: 20, followUps: 1, minutes: 10 },
+  { id: 'remittances', label: 'Obtaining and reading remittances', group: 'B', roleSlot: 'routine', kind: 'R', type: 'batch', batches: 4, minutes: 15 },
+  { id: 'posting', label: 'Posting insurer payments', group: 'B', roleSlot: 'routine', kind: 'R', type: 'rate', basis: 'invoices', incidence: 100, followUps: 1, minutes: 0.5 },
+  { id: 'ageddebt', label: 'Chasing aged insurer debt', group: 'B', roleSlot: 'exception', kind: 'E', type: 'rate', basis: 'invoices', incidence: 10, followUps: 1, minutes: 5 },
+  { id: 'excesses', label: 'Identifying patient excesses', group: 'B', roleSlot: 'routine', kind: 'R', type: 'rate', basis: 'courses', incidence: 100, followUps: 1, minutes: 1 },
+  { id: 'patinv', label: 'Sending patient invoices', group: 'B', roleSlot: 'routine', kind: 'R', type: 'rate', basis: 'courses', incidence: 100, followUps: 1, minutes: 1 },
+  { id: 'patchase', label: 'Chasing patient balances', group: 'B', roleSlot: 'exception', kind: 'E', type: 'rate', basis: 'courses', incidence: 50, followUps: 2, minutes: 4 },
+  { id: 'reconcile', label: 'Reconciling payments to the bank', group: 'B', roleSlot: 'routine', kind: 'R', type: 'batch', batches: 4, minutes: 15 }
+];
+
+const GROUP_LABELS = {
+  B: 'Billing and payments',
+  F: 'Front-end and clinical admin'
+};
+
+const BASIS_LABELS = {
+  courses: 'Courses',
+  appointments: 'Appointments',
+  invoices: 'Invoices',
+  rejected: 'Rejected claims'
+};
+
+/* ---------- Effra benchmarks (section 6) — fixed, never user-editable ---------- */
+
+const EFFRA_FALLBACK = { rejectionPct: 0.3, rejectionLabel: '0.3%', daysToPay: 4 };
+
+const EFFRA_INSURER_BENCHMARKS = {
+  bupa: { rejectionPct: 5, rejectionLabel: 'under 5%', daysToPay: 15 },
+  axa: { rejectionPct: 0.1, rejectionLabel: 'under 0.1%', daysToPay: 19 },
+  vitality: { rejectionPct: 0.3, rejectionLabel: '0.3%', daysToPay: 4 }
+};
+
+const EFFRA_AGED_DEBT_FACTOR = 0.1;
+const EFFRA_WRITE_OFFS_MONTHLY = 0;
+const EFFRA_EXCEPTION_MINUTES = 5;
+const EFFRA_EXCEPTION_LABEL = 'Reviewing Effra exceptions';
+
+function effraBenchmark(insurerKey) {
+  return EFFRA_INSURER_BENCHMARKS[insurerKey] || EFFRA_FALLBACK;
+}
+
+const ASSUMPTIONS_TEXT =
+  "The Effra scenario uses average outcomes across 1000+ practitioners using Effra: rejection rates, payment times, write-offs and aged debt by insurer. Aviva, WPA and other insurers use Effra's Vitality results, as there's no insurer-specific data yet. Billing and payment tasks are automated, with about 5 minutes a month left for reviewing exceptions. Front-end and clinical admin is unchanged. Assumes around 5 sessions per insured course of treatment, based on Effra clinics. Hourly cost = (salary + employer NI + pension) ÷ productive hours; leave is 5.6 weeks pro rata including bank holidays and sickness is 2% of contracted hours. Released time isn't a cash saving unless paid hours are reduced; credited cash is capped at the value of released time.";
+
+const TOOLTIPS = {
+  courses: 'One patient’s treatment under one insurer authorisation. For example, six authorised knee physio sessions count as one course.',
+  hourlyOverride: 'Use this for owners paid by dividend, or to value a clinician’s time at what they’d earn treating patients.',
+  rejectedPct: 'The share of claims an insurer rejects or sends back for correction before paying.',
+  daysToPay: 'The average number of days between an appointment and the insurer’s payment reaching your bank.',
+  writeOffs: 'Insured income you’ve given up collecting, from either the insurer or the patient.',
+  agedDebt: 'Money insurers currently owe you that’s more than 30 days overdue.',
+  incidence: 'How often this task is needed. For example, 20% means one in five claims or patients needs it.',
+  followUps: 'How many times the task is usually repeated, such as chasing a debt twice.',
+  timeReleased: 'Staff time freed up. It only becomes a cash saving if you reduce paid hours or remove a role.'
+};
+
+/* ---- calc.js ---- */
+/* calc.js — pure calculation engine. No DOM, no globals, no stored derived data.
+   buildModel(answers) -> model      compute(model) -> results                  */
+
+/* ---------- small numeric helpers ---------- */
+
+function toNumber(value, fallback = 0) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const n = typeof value === 'number' ? value : Number(String(value).replace(/[\s,£]/g, ''));
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function optionalNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(String(value).replace(/[\s,£]/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+function unique(list) {
+  const out = [];
+  for (const item of list) if (item && !out.includes(item)) out.push(item);
+  return out;
+}
+
+/**
+ * Round a pair so that the displayed figures always add up: the difference is
+ * computed at full precision first, then the second figure is derived from the
+ * rounded first figure minus the rounded difference.
+ */
+function roundedDelta(current, effra, decimals = 0) {
+  const f = Math.pow(10, decimals);
+  const currentUnits = Math.round(current * f);
+  const differenceUnits = Math.round((current - effra) * f);
+  const effraUnits = currentUnits - differenceUnits;
+  return {
+    current: currentUnits / f,
+    effra: effraUnits / f,
+    difference: differenceUnits / f
+  };
+}
+
+/* ---------- staff cost model (section 4) ---------- */
+
+function roleCost(role, constants = CONSTANTS) {
+  const salary = Math.max(0, toNumber(role.salary, 0));
+  const weeklyHours = toNumber(role.weeklyHours, 0);
+  const override = optionalNumber(role.hourlyOverride);
+
+  const employerNI = constants.niRate * Math.max(0, salary - constants.niThreshold);
+  const pension =
+    constants.pensionRate *
+    Math.max(0, Math.min(salary, constants.pensionUpper) - constants.pensionLower);
+
+  const contractedHours = weeklyHours * constants.weeksPerYear;
+  const leaveHours = constants.leaveWeeks * weeklyHours;
+  const sickHours = constants.sicknessRate * contractedHours;
+  const productiveHours = contractedHours - leaveHours - sickHours;
+  const valid = productiveHours > 0;
+
+  let employmentCost = salary + employerNI + pension;
+  let hourlyCost;
+  if (override !== null && override >= 0) {
+    hourlyCost = override;
+    // Value the role's whole year at the notional rate, for the cash-saving maths.
+    employmentCost = override * productiveHours;
+  } else {
+    hourlyCost = valid ? employmentCost / productiveHours : 0;
+  }
+
+  return {
+    key: role.key,
+    label: role.label,
+    salary,
+    weeklyHours,
+    hourlyOverride: override,
+    employerNI,
+    pension,
+    employmentCost,
+    contractedHours,
+    leaveHours,
+    sickHours,
+    productiveHours,
+    hourlyCost,
+    costPerMinute: hourlyCost / 60,
+    valid
+  };
+}
+
+/* ---------- role slot assignment (section 3.2) ---------- */
+
+function assignRoleSlots(answers) {
+  const billing = unique(answers.billingRoles && answers.billingRoles.length
+    ? answers.billingRoles
+    : [DEFAULT_BILLING_ROLE_KEY]);
+
+  let exception;
+  if (billing.length === 1) {
+    exception = billing[0];
+  } else if (answers.exceptionRole && billing.includes(answers.exceptionRole)) {
+    exception = answers.exceptionRole;
+  } else {
+    exception = billing[0];
+  }
+
+  const routine = billing.find((key) => key !== exception) || exception;
+  const front = answers.frontRole && roleDefault(answers.frontRole) ? answers.frontRole : routine;
+
+  return { routine, exception, front, clinician: CLINICIAN_ROLE_KEY };
+}
+
+/* ---------- answers -> model (section 3) ---------- */
+
+function buildModel(answers) {
+  const fee = Math.max(0, toNumber(answers.fee, 70));
+  const effort = toNumber(answers.effort, 100) / 100;
+  const slots = assignRoleSlots(answers);
+
+  // One role object per role type, so picking a Q4 role at Q5 never duplicates it.
+  const roleKeys = unique([...(answers.billingRoles || []), slots.front, slots.clinician]);
+  if (!roleKeys.length) roleKeys.push(DEFAULT_BILLING_ROLE_KEY, CLINICIAN_ROLE_KEY);
+
+  const settings = answers.roleSettings || {};
+  const roles = roleKeys.map((key) => {
+    const base = roleDefault(key) || { key, label: key, salary: 0, weeklyHours: 37.5, hourlyOverride: null };
+    const custom = settings[key] || {};
+    return {
+      key,
+      label: custom.label !== undefined && custom.label !== '' ? custom.label : base.label,
+      salary: custom.salary !== undefined && custom.salary !== '' ? toNumber(custom.salary, base.salary) : base.salary,
+      weeklyHours:
+        custom.weeklyHours !== undefined && custom.weeklyHours !== ''
+          ? toNumber(custom.weeklyHours, base.weeklyHours)
+          : base.weeklyHours,
+      hourlyOverride:
+        custom.hourlyOverride !== undefined ? optionalNumber(custom.hourlyOverride) : base.hourlyOverride
+    };
+  });
+
+  const selected = (answers.insurers || []).filter((key) => INSURERS.some((i) => i.key === key));
+  const appointmentsByKey = answers.appointments || {};
+  const rejectionPct = rejectionPctFor(answers.rejections);
+  const writeOffsAnnual = writeOffsAnnualFor(answers.writeOffs);
+  const agedDebtKnown = answers.agedDebtNotSure !== true && answers.agedDebt !== '' && answers.agedDebt !== null && answers.agedDebt !== undefined;
+  const agedDebtTotal = Math.max(0, toNumber(answers.agedDebt, 0));
+
+  const draft = selected.map((key) => {
+    const appointments = Math.max(0, toNumber(appointmentsByKey[key], 0));
+    return {
+      key,
+      label: insurerLabel(key),
+      appointments,
+      invoices: appointments,
+      courses: appointments / CONSTANTS.sessionsPerCourse,
+      revenue: appointments * fee,
+      rejectionPct,
+      daysToPay: daysToPayFor((answers.daysToPay || {})[key])
+    };
+  });
+
+  const totalRevenue = draft.reduce((sum, i) => sum + i.revenue, 0);
+
+  const insurers = draft.map((insurer) => {
+    const share = totalRevenue > 0 ? insurer.revenue / totalRevenue : 0;
+    const agedDebt = agedDebtKnown
+      ? agedDebtTotal * share
+      : (insurer.revenue * Math.max(0, insurer.daysToPay - 30)) / 30;
+    return {
+      ...insurer,
+      writeOffsMonthly: (writeOffsAnnual / CONSTANTS.monthsPerYear) * share,
+      agedDebt
+    };
+  });
+
+  // Billing-group minutes carry the sense-check multiplier; front-end minutes don't.
+  const activities = ACTIVITY_DEFAULTS.map((activity) => {
+    const scale = activity.group === 'B' ? effort : 1;
+    return {
+      id: activity.id,
+      label: activity.label,
+      group: activity.group,
+      kind: activity.kind,
+      type: activity.type,
+      basis: activity.basis || null,
+      incidence: activity.incidence !== undefined ? activity.incidence : null,
+      followUps: activity.followUps !== undefined ? activity.followUps : null,
+      batches: activity.batches !== undefined ? activity.batches : null,
+      minutes: activity.minutes * scale,
+      role: slots[activity.roleSlot] || null
+    };
+  });
+
+  return {
+    schemaVersion: 1,
+    fee,
+    effort,
+    slots,
+    roles,
+    insurers,
+    activities,
+    timeChoices: answers.timeChoices || {}
+  };
+}
+
+/* ---------- activity costing (section 5) ---------- */
+
+function baseVolume(insurer, basis) {
+  switch (basis) {
+    case 'courses':
+      return insurer.courses;
+    case 'appointments':
+      return insurer.appointments;
+    case 'invoices':
+      return insurer.invoices;
+    case 'rejected':
+      return (insurer.invoices * insurer.rejectionPct) / 100;
+    default:
+      return 0;
+  }
+}
+
+function emptyBucket() {
+  return { minutes: 0, cost: 0 };
+}
+
+function addTo(map, key, minutes, cost) {
+  if (!map[key]) map[key] = emptyBucket();
+  map[key].minutes += minutes;
+  map[key].cost += cost;
+}
+
+/**
+ * Run one scenario. `activities` may contain rate rows, batch rows and fixed
+ * rows (a flat monthly total, used for the Effra exception review).
+ */
+function runScenario(roles, insurers, activities) {
+  const costs = {};
+  for (const role of roles) costs[role.key] = roleCost(role);
+
+  const totalInvoices = insurers.reduce((sum, i) => sum + i.invoices, 0);
+
+  const byRole = {};
+  const byInsurer = {};
+  const byGroup = { B: emptyBucket(), F: emptyBucket() };
+  for (const insurer of insurers) byInsurer[insurer.key] = emptyBucket();
+
+  let excludedActivities = 0;
+  const rows = [];
+  let totalMinutes = 0;
+  let totalCost = 0;
+
+  for (const activity of activities) {
+    const role = costs[activity.role];
+    if (!activity.role || !role || !role.valid) {
+      if (activity.role === null || activity.role === '' || !role) excludedActivities += 1;
+      continue;
+    }
+    const perMinute = role.costPerMinute;
+    const perInsurer = {};
+    let minutes = 0;
+
+    if (activity.type === 'rate') {
+      for (const insurer of insurers) {
+        const volume =
+          baseVolume(insurer, activity.basis) *
+          (activity.incidence / 100) *
+          activity.followUps *
+          activity.minutes;
+        perInsurer[insurer.key] = volume;
+        minutes += volume;
+      }
+    } else {
+      // Batch and fixed rows happen once for the whole clinic, then get
+      // allocated to insurers by invoice share for the per-insurer chart only.
+      minutes = activity.type === 'batch' ? activity.batches * activity.minutes : activity.minutes;
+      let allocated = 0;
+      insurers.forEach((insurer, index) => {
+        let share;
+        if (index === insurers.length - 1) {
+          share = minutes - allocated; // remainder, so the split is exact
+        } else {
+          share = totalInvoices > 0 ? (minutes * insurer.invoices) / totalInvoices : minutes / insurers.length;
+          allocated += share;
+        }
+        perInsurer[insurer.key] = share;
+      });
+    }
+
+    const cost = minutes * perMinute;
+    totalMinutes += minutes;
+    totalCost += cost;
+    addTo(byRole, activity.role, minutes, cost);
+    addTo(byGroup, activity.group, minutes, cost);
+    for (const insurer of insurers) {
+      addTo(byInsurer, insurer.key, perInsurer[insurer.key], perInsurer[insurer.key] * perMinute);
+    }
+
+    rows.push({
+      id: activity.id,
+      label: activity.label,
+      group: activity.group,
+      role: activity.role,
+      minutes,
+      cost,
+      byInsurer: perInsurer
+    });
+  }
+
+  const revenue = insurers.reduce((sum, i) => sum + i.revenue, 0);
+  const invoices = insurers.reduce((sum, i) => sum + i.invoices, 0);
+  const appointments = insurers.reduce((sum, i) => sum + i.appointments, 0);
+  const rejectedClaims = insurers.reduce((sum, i) => sum + (i.invoices * i.rejectionPct) / 100, 0);
+  const weightedDays = insurers.reduce((sum, i) => sum + i.revenue * i.daysToPay, 0);
+
+  return {
+    roleCosts: costs,
+    activities: rows,
+    byRole,
+    byInsurer,
+    byGroup,
+    excludedActivities,
+    totals: { minutes: totalMinutes, cost: totalCost },
+    revenue,
+    invoices,
+    appointments,
+    rejectedClaims,
+    avgDaysToPay: revenue > 0 ? weightedDays / revenue : 0,
+    writeOffsMonthly: insurers.reduce((sum, i) => sum + i.writeOffsMonthly, 0),
+    agedDebt: insurers.reduce((sum, i) => sum + i.agedDebt, 0)
+  };
+}
+
+/* ---------- Effra scenario (section 6) ---------- */
+
+function effraInsurers(insurers) {
+  return insurers.map((insurer) => {
+    const benchmark = effraBenchmark(insurer.key);
+    return {
+      ...insurer,
+      rejectionPct: benchmark.rejectionPct,
+      rejectionLabel: benchmark.rejectionLabel,
+      daysToPay: benchmark.daysToPay,
+      writeOffsMonthly: EFFRA_WRITE_OFFS_MONTHLY,
+      agedDebt: insurer.agedDebt * EFFRA_AGED_DEBT_FACTOR
+    };
+  });
+}
+
+function effraActivities(activities, exceptionRole) {
+  const front = activities
+    .filter((a) => a.group === 'F')
+    .map((a) => ({ ...a }));
+  front.push({
+    id: 'effra-exceptions',
+    label: EFFRA_EXCEPTION_LABEL,
+    group: 'B',
+    kind: 'E',
+    type: 'fixed',
+    basis: null,
+    incidence: null,
+    followUps: null,
+    batches: null,
+    minutes: EFFRA_EXCEPTION_MINUTES,
+    role: exceptionRole
+  });
+  return front;
+}
+
+/* ---------- released time -> cash (section 7.1) ---------- */
+
+function cashForChoice(choice, roleCostModel) {
+  if (!choice || choice.mode === 'keep' || !roleCostModel) return 0;
+  if (choice.mode === 'remove') return roleCostModel.employmentCost;
+  if (choice.mode === 'reduce') {
+    const hoursCut = Math.max(0, toNumber(choice.hoursCut, 0));
+    if (roleCostModel.contractedHours <= 0) return 0;
+    return (hoursCut * CONSTANTS.weeksPerYear * roleCostModel.employmentCost) / roleCostModel.contractedHours;
+  }
+  return 0;
+}
+
+/* ---------- compute (section 7) ---------- */
+
+function compute(model) {
+  const F = CONSTANTS.monthsPerYear;
+  const current = runScenario(model.roles, model.insurers, model.activities);
+  const effra = runScenario(
+    model.roles,
+    effraInsurers(model.insurers),
+    effraActivities(model.activities, model.slots.exception)
+  );
+
+  const capacityValue = (current.totals.cost - effra.totals.cost) * F;
+
+  const releasedByRole = {};
+  let releasedHoursTotal = 0;
+  for (const role of model.roles) {
+    const currentMinutes = current.byRole[role.key] ? current.byRole[role.key].minutes : 0;
+    const effraMinutes = effra.byRole[role.key] ? effra.byRole[role.key].minutes : 0;
+    const hours = ((currentMinutes - effraMinutes) / 60) * F;
+    releasedByRole[role.key] = {
+      currentMinutes,
+      effraMinutes,
+      hoursReleased: hours,
+      valueReleased:
+        ((current.byRole[role.key] ? current.byRole[role.key].cost : 0) -
+          (effra.byRole[role.key] ? effra.byRole[role.key].cost : 0)) *
+        F
+    };
+    releasedHoursTotal += hours;
+  }
+
+  const cashReleased =
+    ((current.revenue * F) / CONSTANTS.daysPerYear) * (current.avgDaysToPay - effra.avgDaysToPay);
+
+  // Released time turns into cash only where paid hours actually fall.
+  let cashRequested = 0;
+  const cashByRole = {};
+  for (const role of model.roles) {
+    const amount = cashForChoice(model.timeChoices[role.key], current.roleCosts[role.key]);
+    cashByRole[role.key] = amount;
+    cashRequested += amount;
+  }
+  const cashCredited = Math.min(cashRequested, Math.max(capacityValue, 0));
+  const excess = cashRequested - cashCredited;
+
+  const perInsurer = model.insurers.map((insurer, index) => {
+    const benchmark = effraBenchmark(insurer.key);
+    return {
+      key: insurer.key,
+      label: insurer.label,
+      currentDays: insurer.daysToPay,
+      effraDays: benchmark.daysToPay,
+      currentRejectionPct: insurer.rejectionPct,
+      effraRejectionLabel: benchmark.rejectionLabel,
+      currentCost: current.byInsurer[insurer.key] ? current.byInsurer[insurer.key].cost : 0,
+      effraCost: effra.byInsurer[insurer.key] ? effra.byInsurer[insurer.key].cost : 0,
+      index
+    };
+  });
+
+  return {
+    current,
+    effra,
+    perInsurer,
+    excludedActivities: current.excludedActivities,
+    headline: {
+      capacityValue,
+      cashReleased,
+      writeOffsRecovered: (current.writeOffsMonthly - effra.writeOffsMonthly) * F,
+      agedDebtReduced: current.agedDebt - effra.agedDebt,
+      releasedHoursTotal,
+      daysSooner: current.avgDaysToPay - effra.avgDaysToPay,
+      billingHoursReleasedMonthly: (current.byGroup.B.minutes - effra.byGroup.B.minutes) / 60
+    },
+    released: releasedByRole,
+    cash: { byRole: cashByRole, requested: cashRequested, credited: cashCredited, excess },
+    ratios: {
+      costPerClaim: current.invoices > 0 ? current.totals.cost / current.invoices : 0,
+      costPerAppointment: current.appointments > 0 ? current.totals.cost / current.appointments : 0,
+      pctOfRevenue: current.revenue > 0 ? current.totals.cost / current.revenue : 0,
+      reworkRate: current.invoices > 0 ? current.rejectedClaims / current.invoices : 0,
+      effraReworkRate: effra.invoices > 0 ? effra.rejectedClaims / effra.invoices : 0
+    }
+  };
+}
+
+/* ---- survey.js ---- */
+/* survey.js — question definitions, demo/blank answers and validation. No DOM. */
+
+
+const QUESTIONS = [
+  { id: 'insurers', title: 'Which insurers do you work with?', helper: 'Choose all that apply.', notSure: false },
+  { id: 'appointments', title: 'Roughly how many insured appointments a month?', helper: 'A rough monthly figure for each insurer is fine.', notSure: false },
+  { id: 'fee', title: 'What’s your average fee per insured session?', helper: 'Include both the insurer and patient portions.', notSure: true },
+  { id: 'billingRoles', title: 'Who handles insurance billing and chasing?', helper: 'Choose everyone involved. Typical salary and hours are filled in; change them if they’re off.', notSure: true },
+  { id: 'frontRole', title: 'Who handles authorisations and new-patient admin?', helper: 'Policy details, authorisation checks and session tracking.', notSure: true },
+  { id: 'daysToPay', title: 'How long do insurers usually take to pay you?', helper: 'From the appointment to the money reaching your bank.', notSure: false },
+  { id: 'rejections', title: 'How often are claims rejected or sent back?', helper: 'Across all your insurers.', notSure: true },
+  { id: 'agedDebt', title: 'How much do insurers owe you that’s over 30 days late?', helper: 'A rough total across all insurers.', notSure: true },
+  { id: 'writeOffs', title: 'Roughly how much insured income do you write off a year?', helper: 'Money you’ve given up collecting from insurers or patients.', notSure: true },
+  { id: 'effort', title: 'Does this sound right?', helper: 'Drag the slider if our estimate looks too high or too low.', notSure: false }
+];
+
+const DEFAULT_FEE = 70;
+
+function demoAnswers() {
+  return {
+    insurers: ['bupa', 'axa', 'vitality'],
+    appointments: { bupa: 60, axa: 40, vitality: 25 },
+    fee: 70,
+    billingRoles: ['rec', 'pm'],
+    exceptionRole: 'pm',
+    frontRole: 'rec',
+    roleSettings: {},
+    daysToPay: { bupa: '1to2m', axa: '1to2m', vitality: '2to4w' },
+    rejections: 'sometimes',
+    agedDebt: '',
+    agedDebtNotSure: true,
+    writeOffs: '1kto5k',
+    effort: 100,
+    timeChoices: {}
+  };
+}
+
+function blankAnswers() {
+  return {
+    insurers: [],
+    appointments: {},
+    fee: '',
+    billingRoles: [],
+    exceptionRole: '',
+    frontRole: '',
+    roleSettings: {},
+    daysToPay: {},
+    rejections: '',
+    agedDebt: '',
+    agedDebtNotSure: false,
+    writeOffs: '',
+    effort: 100,
+    timeChoices: {}
+  };
+}
+
+/** Apply a question's "Not sure" answer in place. */
+function applyNotSure(answers, questionId) {
+  switch (questionId) {
+    case 'fee':
+      answers.fee = DEFAULT_FEE;
+      break;
+    case 'billingRoles':
+      answers.billingRoles = [DEFAULT_BILLING_ROLE_KEY];
+      answers.exceptionRole = DEFAULT_BILLING_ROLE_KEY;
+      break;
+    case 'frontRole':
+      answers.frontRole = assignRoleSlots(answers).routine;
+      break;
+    case 'rejections':
+      answers.rejections = 'notsure';
+      break;
+    case 'agedDebt':
+      answers.agedDebt = '';
+      answers.agedDebtNotSure = true;
+      break;
+    case 'writeOffs':
+      answers.writeOffs = 'notsure';
+      break;
+    default:
+      break;
+  }
+  return answers;
+}
+
+const NUMBER_ERROR = 'Enter a number of 0 or more.';
+
+function isValidNumber(value) {
+  if (value === '' || value === null || value === undefined) return false;
+  const n = Number(String(value).replace(/[\s,£]/g, ''));
+  return Number.isFinite(n) && n >= 0;
+}
+
+/** Validate one question. Returns null when valid, otherwise a message. */
+function validateQuestion(questionId, answers) {
+  switch (questionId) {
+    case 'insurers':
+      return (answers.insurers || []).length ? null : 'Choose at least one insurer.';
+    case 'appointments': {
+      const selected = answers.insurers || [];
+      for (const key of selected) {
+        const raw = (answers.appointments || {})[key];
+        if (raw !== '' && raw !== null && raw !== undefined && !isValidNumber(raw)) return NUMBER_ERROR;
+      }
+      const total = selected.reduce((sum, key) => sum + toNumber((answers.appointments || {})[key], 0), 0);
+      return total > 0 ? null : 'Enter an appointment count above zero for at least one insurer.';
+    }
+    case 'fee':
+      return isValidNumber(answers.fee) ? null : NUMBER_ERROR;
+    case 'billingRoles': {
+      if (!(answers.billingRoles || []).length) return 'Choose at least one person.';
+      const salaryError = validateRoleSettings(answers, answers.billingRoles);
+      if (salaryError) return salaryError;
+      if (answers.billingRoles.length > 1 && !answers.billingRoles.includes(answers.exceptionRole)) {
+        return 'Choose who does most of the chasing and fixing problems.';
+      }
+      return null;
+    }
+    case 'frontRole': {
+      if (!answers.frontRole) return 'Choose one person.';
+      return validateRoleSettings(answers, [answers.frontRole]);
+    }
+    case 'daysToPay': {
+      for (const key of answers.insurers || []) {
+        if (!(answers.daysToPay || {})[key]) return 'Choose an answer for every insurer.';
+      }
+      return null;
+    }
+    case 'rejections':
+      return answers.rejections ? null : 'Choose an answer.';
+    case 'agedDebt':
+      if (answers.agedDebtNotSure) return null;
+      return isValidNumber(answers.agedDebt) ? null : NUMBER_ERROR;
+    case 'writeOffs':
+      return answers.writeOffs ? null : 'Choose an answer.';
+    case 'effort':
+      return null;
+    default:
+      return null;
+  }
+}
+
+function validateRoleSettings(answers, roleKeys) {
+  const settings = answers.roleSettings || {};
+  for (const key of roleKeys) {
+    const custom = settings[key];
+    if (!custom) continue;
+    if (custom.salary !== undefined && custom.salary !== '' && !isValidNumber(custom.salary)) return NUMBER_ERROR;
+    if (custom.weeklyHours !== undefined && custom.weeklyHours !== '' && !isValidNumber(custom.weeklyHours)) return NUMBER_ERROR;
+    const base = ROLE_DEFAULTS.find((r) => r.key === key);
+    const hours = custom.weeklyHours !== undefined && custom.weeklyHours !== ''
+      ? toNumber(custom.weeklyHours, 0)
+      : (base ? base.weeklyHours : 0);
+    if (hours <= 0) return 'Enter weekly hours above zero.';
+  }
+  return null;
+}
+
+/** Ordered role list for Q5: roles already chosen in Q4 first. */
+function frontRoleOptions(answers) {
+  const chosen = answers.billingRoles || [];
+  const first = ROLE_DEFAULTS.filter((r) => chosen.includes(r.key));
+  const rest = ROLE_DEFAULTS.filter((r) => !chosen.includes(r.key));
+  return [...first, ...rest];
+}
+
+/* ---- charts.js ---- */
+/* charts.js — hand-rolled CSS bar charts with direct value labels, each paired
+   with a visually hidden data table. Colour is never the only carrier of
+   meaning: every bar is labelled with its series name and its value. */
+
+function escapeHtml(value) {
+  return String(value === null || value === undefined ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+let chartCounter = 0;
+function nextId(prefix) {
+  chartCounter += 1;
+  return `${prefix}-${chartCounter}`;
+}
+
+function bar(value, max, format, seriesLabel, modifier) {
+  const safeMax = max > 0 ? max : 1;
+  const width = Math.max(0, Math.min(100, (Math.abs(value) / safeMax) * 100));
+  // Short bars put their label outside so it never gets clipped.
+  const outside = width < 22;
+  const classes = ['chart__bar'];
+  if (modifier) classes.push(modifier);
+  if (outside) classes.push('chart__bar--outside');
+  const label = `<span class="chart__value">${escapeHtml(format(value))}</span>`;
+  return (
+    `<div class="chart__row">` +
+    `<span class="chart__row-label">${escapeHtml(seriesLabel)}</span>` +
+    `<div class="chart__track">` +
+    `<div class="${classes.join(' ')}" style="width:${width.toFixed(2)}%">${outside ? '' : label}</div>` +
+    (outside ? label : '') +
+    `</div></div>`
+  );
+}
+
+function hiddenTable(caption, headers, rows) {
+  const head = headers.map((h) => `<th scope="col">${escapeHtml(h)}</th>`).join('');
+  const body = rows
+    .map(
+      (row) =>
+        `<tr><th scope="row">${escapeHtml(row[0])}</th>` +
+        row.slice(1).map((cell) => `<td>${escapeHtml(cell)}</td>`).join('') +
+        `</tr>`
+    )
+    .join('');
+  // The wrapper does the hiding: a table ignores `width: 1px` and would
+  // otherwise stretch the page to its natural width.
+  return (
+    `<div class="visually-hidden"><table><caption>${escapeHtml(caption)}</caption>` +
+    `<thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`
+  );
+}
+
+/**
+ * Grouped bars: one group per category, two bars per group (current vs Effra).
+ * categories: [{ label, current, effra }]
+ */
+function groupedBarChart({ title, categories, currentLabel = 'Now', effraLabel = 'With Effra', format }) {
+  const id = nextId('chart');
+  const max = categories.reduce((m, c) => Math.max(m, Math.abs(c.current), Math.abs(c.effra)), 0);
+
+  const groups = categories
+    .map(
+      (category) =>
+        `<div class="chart__group">` +
+        `<div class="chart__group-label">${escapeHtml(category.label)}</div>` +
+        bar(category.current, max, format, currentLabel, null) +
+        bar(category.effra, max, format, effraLabel, 'chart__bar--effra') +
+        `</div>`
+    )
+    .join('');
+
+  const table = hiddenTable(
+    title,
+    ['', currentLabel, effraLabel],
+    categories.map((c) => [c.label, format(c.current), format(c.effra)])
+  );
+
+  return (
+    `<figure class="chart" role="group" aria-labelledby="${id}-title">` +
+    `<figcaption class="chart__title" id="${id}-title">${escapeHtml(title)}</figcaption>` +
+    `<div class="chart__legend">` +
+    `<span class="chart__key"><span class="chart__swatch chart__swatch--current" aria-hidden="true"></span>${escapeHtml(currentLabel)}</span>` +
+    `<span class="chart__key"><span class="chart__swatch chart__swatch--effra" aria-hidden="true"></span>${escapeHtml(effraLabel)}</span>` +
+    `</div>` +
+    groups +
+    table +
+    `</figure>`
+  );
+}
+
+/**
+ * Plain horizontal bars.
+ * items: [{ label, value }]
+ */
+function horizontalBarChart({ title, items, format, valueHeading = 'Value' }) {
+  const id = nextId('chart');
+  const max = items.reduce((m, i) => Math.max(m, Math.abs(i.value)), 0);
+  const rows = items.map((item) => bar(item.value, max, format, item.label, 'chart__bar--plain')).join('');
+  const table = hiddenTable(title, ['', valueHeading], items.map((i) => [i.label, format(i.value)]));
+
+  return (
+    `<figure class="chart chart--labels-wide" role="group" aria-labelledby="${id}-title">` +
+    `<figcaption class="chart__title" id="${id}-title">${escapeHtml(title)}</figcaption>` +
+    rows +
+    table +
+    `</figure>`
+  );
+}
+
+/* ---- ui.js ---- */
+/* ui.js — rendering, events, tooltips, storage, CSV and print. */
+
+
+
+
+const STORAGE_KEY = 'pmiCalc.v1';
+const SCHEMA_VERSION = 1;
+const esc = escapeHtml;
+
+/* ---------- formatting ---------- */
+
+const gbp0 = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 });
+const gbp2 = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const num0 = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 });
+const num1 = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 1 });
+
+const money = (v) => gbp0.format(v);
+const moneyPrecise = (v) => gbp2.format(v);
+const hours = (v) => `${num0.format(v)} hrs`;
+const hours1 = (v) => `${num1.format(v)} hrs`;
+const days = (v) => `${num0.format(v)} days`;
+const percent = (v) => `${num1.format(v * 100)}%`;
+
+/* ---------- state ---------- */
+
+const state = {
+  view: 'survey',
+  step: 0,
+  answers: demoAnswers(),
+  model: null,
+  error: '',
+  openTips: [],
+  detailsOpen: false,
+  status: ''
+};
+
+function rebuildModel() {
+  state.model = buildModel(state.answers);
+}
+
+/* ---------- tooltips ---------- */
+
+/** `instance` keeps ids unique where the same tooltip appears more than once. */
+function tooltip(key, labelHtml, instance = '') {
+  const text = TOOLTIPS[key];
+  if (!text) return labelHtml;
+  const slug = instance ? `${key}-${instance}` : key;
+  const id = `tip-${slug}`;
+  const open = state.openTips.includes(slug);
+  return (
+    `<span class="tip-wrap">${labelHtml}` +
+    `<button type="button" class="tip-btn" id="tipbtn-${esc(slug)}" data-tip="${esc(slug)}" aria-expanded="${open}" aria-controls="${id}">` +
+    `<span aria-hidden="true">?</span><span class="visually-hidden">What does this mean?</span></button></span>` +
+    `<div class="tip-body" id="${id}"${open ? '' : ' hidden'}>${esc(text)}</div>`
+  );
+}
+
+function toggleTip(key) {
+  const index = state.openTips.indexOf(key);
+  if (index === -1) state.openTips.push(key);
+  else state.openTips.splice(index, 1);
+}
+
+/* ---------- small html helpers ---------- */
+
+function field({ id, label, value, type = 'number', hint = '', min = 0, step = 'any', suffix = '', dataset = {} }) {
+  const attrs = Object.entries(dataset)
+    .map(([k, v]) => ` data-${k}="${esc(v)}"`)
+    .join('');
+  return (
+    `<div class="field">` +
+    `<label for="${esc(id)}">${esc(label)}${hint ? `<span class="field__hint">${esc(hint)}</span>` : ''}</label>` +
+    `<input id="${esc(id)}" type="${type}" inputmode="decimal" min="${min}" step="${step}" value="${esc(value)}" aria-describedby="${esc(id)}-error"${attrs}>` +
+    (suffix ? `<span class="field__hint">${esc(suffix)}</span>` : '') +
+    `<p class="error" id="${esc(id)}-error" aria-live="polite"></p>` +
+    `</div>`
+  );
+}
+
+function choice({ name, value, label, checked, type = 'radio', dataset = {} }) {
+  const attrs = Object.entries(dataset)
+    .map(([k, v]) => ` data-${k}="${esc(v)}"`)
+    .join('');
+  const id = `${name}-${value}`;
+  return (
+    `<label class="choice${checked ? ' choice--selected' : ''}" for="${esc(id)}">` +
+    `<input type="${type}" id="${esc(id)}" name="${esc(name)}" value="${esc(value)}"${checked ? ' checked' : ''}${attrs}>` +
+    `<span>${esc(label)}</span></label>`
+  );
+}
+
+function tile({ label, value, note = '', success = false, negative = false, tip = '' }) {
+  const labelHtml = tip ? tooltip(tip, `<span class="tile__label">${esc(label)}</span>`) : `<span class="tile__label">${esc(label)}</span>`;
+  return (
+    `<div class="tile${success ? ' tile--success' : ''}">` +
+    labelHtml +
+    `<span class="tile__value${negative ? ' tile__value--negative' : ''}">${esc(value)}</span>` +
+    (note ? `<span class="tile__note">${esc(note)}</span>` : '') +
+    `</div>`
+  );
+}
+
+/* ---------- survey ---------- */
+
+function roleSettingsBlock(roleKey) {
+  const base = ROLE_DEFAULTS.find((r) => r.key === roleKey);
+  if (!base) return '';
+  const custom = (state.answers.roleSettings || {})[roleKey] || {};
+  const salary = custom.salary !== undefined && custom.salary !== '' ? custom.salary : base.salary;
+  const weeklyHours = custom.weeklyHours !== undefined && custom.weeklyHours !== '' ? custom.weeklyHours : base.weeklyHours;
+  return (
+    `<div class="role-settings">` +
+    field({
+      id: `salary-${roleKey}`,
+      label: `${base.label} — salary a year`,
+      value: salary,
+      dataset: { rolesetting: 'salary', role: roleKey }
+    }) +
+    field({
+      id: `hours-${roleKey}`,
+      label: `${base.label} — hours a week`,
+      value: weeklyHours,
+      dataset: { rolesetting: 'weeklyHours', role: roleKey }
+    }) +
+    `</div>`
+  );
+}
+
+function renderQuestion(index) {
+  const q = QUESTIONS[index];
+  const a = state.answers;
+
+  switch (q.id) {
+    case 'insurers':
+      return (
+        `<fieldset><legend class="visually-hidden">Insurers</legend><div class="choice-list choice-list--inline">` +
+        INSURERS.map((i) =>
+          choice({
+            name: 'insurers',
+            value: i.key,
+            label: i.label,
+            checked: (a.insurers || []).includes(i.key),
+            type: 'checkbox',
+            dataset: { answer: 'insurers' }
+          })
+        ).join('') +
+        `</div></fieldset>`
+      );
+
+    case 'appointments':
+      return (a.insurers || [])
+        .map((key) =>
+          field({
+            id: `appts-${key}`,
+            label: `${insurerLabel(key)} — appointments a month`,
+            value: (a.appointments || {})[key] === undefined ? '' : a.appointments[key],
+            dataset: { answer: 'appointments', insurer: key }
+          })
+        )
+        .join('');
+
+    case 'fee':
+      return field({
+        id: 'fee',
+        label: 'Average fee per insured session',
+        value: a.fee === undefined ? '' : a.fee,
+        hint: 'In pounds, for example 70.',
+        dataset: { answer: 'fee' }
+      });
+
+    case 'billingRoles': {
+      const selected = a.billingRoles || [];
+      const list =
+        `<fieldset><legend class="visually-hidden">People who handle billing</legend><div class="choice-list">` +
+        ROLE_DEFAULTS.map(
+          (r) =>
+            choice({
+              name: 'billingRoles',
+              value: r.key,
+              label: r.label,
+              checked: selected.includes(r.key),
+              type: 'checkbox',
+              dataset: { answer: 'billingRoles' }
+            }) + (selected.includes(r.key) ? roleSettingsBlock(r.key) : '')
+        ).join('') +
+        `</div></fieldset>`;
+
+      if (selected.length < 2) return list;
+
+      const followUp =
+        `<fieldset><legend>Who does most of the chasing and fixing problems?` +
+        `<span class="field__hint">Rejected claims, shortfalls and overdue payments.</span></legend>` +
+        `<div class="choice-list choice-list--inline">` +
+        selected
+          .map((key) => {
+            const role = ROLE_DEFAULTS.find((r) => r.key === key);
+            return choice({
+              name: 'exceptionRole',
+              value: key,
+              label: role ? role.label : key,
+              checked: a.exceptionRole === key,
+              dataset: { answer: 'exceptionRole' }
+            });
+          })
+          .join('') +
+        `</div></fieldset>`;
+      return list + followUp;
+    }
+
+    case 'frontRole': {
+      const options = frontRoleOptions(a);
+      const chosen = a.billingRoles || [];
+      return (
+        `<fieldset><legend class="visually-hidden">Person who handles authorisations</legend><div class="choice-list">` +
+        options
+          .map((r) => {
+            const already = chosen.includes(r.key);
+            const label = already ? `${r.label} (already handles billing)` : r.label;
+            const block = a.frontRole === r.key && !already ? roleSettingsBlock(r.key) : '';
+            return (
+              choice({
+                name: 'frontRole',
+                value: r.key,
+                label,
+                checked: a.frontRole === r.key,
+                dataset: { answer: 'frontRole' }
+              }) + block
+            );
+          })
+          .join('') +
+        `</div></fieldset>`
+      );
+    }
+
+    case 'daysToPay':
+      return (a.insurers || [])
+        .map(
+          (key) =>
+            `<fieldset><legend>${esc(insurerLabel(key))}</legend><div class="choice-list choice-list--inline">` +
+            DAYS_TO_PAY_OPTIONS.map((o) =>
+              choice({
+                name: `daysToPay-${key}`,
+                value: o.key,
+                label: o.label,
+                checked: (a.daysToPay || {})[key] === o.key,
+                dataset: { answer: 'daysToPay', insurer: key }
+              })
+            ).join('') +
+            `</div></fieldset>`
+        )
+        .join('');
+
+    case 'rejections':
+      return (
+        `<fieldset><legend class="visually-hidden">Rejection frequency</legend><div class="choice-list choice-list--inline">` +
+        REJECTION_OPTIONS.filter((o) => o.key !== 'notsure')
+          .map((o) =>
+            choice({
+              name: 'rejections',
+              value: o.key,
+              label: o.label,
+              checked: a.rejections === o.key,
+              dataset: { answer: 'rejections' }
+            })
+          )
+          .join('') +
+        `</div></fieldset>` +
+        (a.rejections === 'notsure' ? `<p class="note">Using a typical rate of 5% of claims.</p>` : '')
+      );
+
+    case 'agedDebt':
+      return (
+        tooltip('agedDebt', `<span class="field__label">What counts as aged debt?</span>`) +
+        field({
+          id: 'agedDebt',
+          label: 'Total owed, over 30 days late',
+          value: a.agedDebtNotSure ? '' : a.agedDebt,
+          hint: 'In pounds. Leave it to us if you’re not sure.',
+          dataset: { answer: 'agedDebt' }
+        }) +
+        (a.agedDebtNotSure ? `<p class="note">We’ll estimate this from how long each insurer takes to pay.</p>` : '')
+      );
+
+    case 'writeOffs':
+      return (
+        `<fieldset><legend class="visually-hidden">Annual write-offs</legend><div class="choice-list choice-list--inline">` +
+        WRITE_OFF_OPTIONS.filter((o) => o.key !== 'notsure')
+          .map((o) =>
+            choice({
+              name: 'writeOffs',
+              value: o.key,
+              label: o.label,
+              checked: a.writeOffs === o.key,
+              dataset: { answer: 'writeOffs' }
+            })
+          )
+          .join('') +
+        `</div></fieldset>` +
+        (a.writeOffs === 'notsure' ? `<p class="note">Using a typical figure of £1,000 a year.</p>` : '')
+      );
+
+    case 'effort': {
+      const billingHoursWeekly = senseCheckHours();
+      return (
+        `<p class="sense-check" id="sense-check">We estimate your team spends about ` +
+        `<strong>${esc(num1.format(billingHoursWeekly))} hours a week</strong> on insurance billing, chasing and reconciling.</p>` +
+        `<div class="field">` +
+        `<label for="effort">Does that sound right?</label>` +
+        `<input type="range" id="effort" min="50" max="200" step="10" value="${esc(a.effort)}" data-answer="effort" ` +
+        `aria-describedby="effort-value">` +
+        `<div class="slider-scale" aria-hidden="true"><span>Much less</span><span>About right</span><span>Much more</span></div>` +
+        `<p class="field__hint" id="effort-value">Currently set to ${esc(a.effort)}% of our estimate.</p>` +
+        `</div>`
+      );
+    }
+
+    default:
+      return '';
+  }
+}
+
+/** Weekly billing-group hours, used live by the Q10 sense check. */
+function senseCheckHours() {
+  const model = buildModel(state.answers);
+  const results = compute(model);
+  return (results.current.byGroup.B.minutes / 60) * (CONSTANTS.monthsPerYear / CONSTANTS.weeksPerYear);
+}
+
+function renderSurvey() {
+  const index = state.step;
+  const q = QUESTIONS[index];
+  const isLast = index === QUESTIONS.length - 1;
+  const percentDone = ((index + 1) / QUESTIONS.length) * 100;
+
+  return (
+    `<div class="progress">` +
+    `<div class="progress__label"><span id="progress-text">Question ${index + 1} of ${QUESTIONS.length}</span></div>` +
+    `<div class="progress__track" role="progressbar" aria-valuenow="${index + 1}" aria-valuemin="1" aria-valuemax="${QUESTIONS.length}" aria-labelledby="progress-text">` +
+    `<div class="progress__bar" style="width:${percentDone}%"></div></div></div>` +
+    `<div class="card">` +
+    `<h2 id="question-title">${esc(q.title)}</h2>` +
+    `<p class="question__helper">${esc(q.helper)}</p>` +
+    `<div id="question-body">${renderQuestion(index)}</div>` +
+    `<p class="error" id="survey-error" role="alert">${esc(state.error)}</p>` +
+    `<div class="button-row button-row--split">` +
+    `<div class="button-row">` +
+    `<button type="button" class="btn btn--quiet" data-action="back"${index === 0 ? ' disabled' : ''}>Back</button>` +
+    (q.notSure ? `<button type="button" class="btn btn--secondary" data-action="not-sure">Not sure</button>` : '') +
+    `</div>` +
+    `<button type="button" class="btn" data-action="next">${isLast ? 'See my results' : 'Next'}</button>` +
+    `</div></div>` +
+    `<div class="button-row no-print">` +
+    `<button type="button" class="btn btn--quiet" data-action="reset">Reset</button>` +
+    `<button type="button" class="btn btn--quiet" data-action="clear">Clear example data</button>` +
+    `<button type="button" class="btn btn--quiet" data-action="save">Save</button>` +
+    `<span class="status" role="status">${esc(state.status)}</span>` +
+    `</div>`
+  );
+}
+
+/* ---------- results ---------- */
+
+function renderResults() {
+  const model = state.model;
+  const r = compute(model);
+
+  const totalCost = roundedDelta(r.current.totals.cost, r.effra.totals.cost, 0);
+  const daysDelta = roundedDelta(r.current.avgDaysToPay, r.effra.avgDaysToPay, 0);
+
+  return (
+    renderHeader() +
+    renderSummary(r, totalCost, daysDelta) +
+    renderEffraCard(r, daysDelta) +
+    renderReleasedTime(r) +
+    renderCurrentProcess(r) +
+    renderBreakdownCharts(r) +
+    renderAssumptions() +
+    (r.excludedActivities > 0
+      ? `<p class="note">${r.excludedActivities} ${r.excludedActivities === 1 ? 'activity has' : 'activities have'} no one assigned, so ${r.excludedActivities === 1 ? 'it is' : 'they are'} left out of these figures.</p>`
+      : '')
+  );
+}
+
+function renderHeader() {
+  return (
+    `<div class="button-row button-row--split" style="margin-bottom:1rem">` +
+    `<h1 style="margin:0">Your results</h1>` +
+    `<button type="button" class="btn btn--secondary no-print" data-action="edit-answers">Edit answers</button>` +
+    `</div>`
+  );
+}
+
+function renderSummary(r, totalCost, daysDelta) {
+  const staffHours = r.current.totals.minutes / 60;
+  const billingHours = r.headline.billingHoursReleasedMonthly;
+  return (
+    `<div class="card">` +
+    `<p class="summary-text">Your clinic spends about <strong>${esc(money(totalCost.current))}</strong> and ` +
+    `<strong>${esc(hours(staffHours))}</strong> of staff time a month administering insured work. ` +
+    `With Effra, insurers would pay you about <strong>${esc(days(daysDelta.difference))}</strong> sooner, and ` +
+    `<strong>${esc(hours1(billingHours))}</strong> of billing and payment work a month would be done for you.</p>` +
+    `</div>`
+  );
+}
+
+function renderEffraCard(r, daysDelta) {
+  const h = r.headline;
+  const releasedHours = h.releasedHoursTotal;
+
+  const tiles =
+    tile({
+      label: 'Cash released by faster payment',
+      value: money(h.cashReleased),
+      note: 'One-off, as the payment backlog clears',
+      success: h.cashReleased > 0,
+      negative: h.cashReleased < 0
+    }) +
+    tile({
+      label: 'Write-offs recovered',
+      value: money(h.writeOffsRecovered),
+      note: 'Per year',
+      success: h.writeOffsRecovered > 0,
+      negative: h.writeOffsRecovered < 0
+    }) +
+    tile({
+      label: 'Aged debt reduced',
+      value: money(h.agedDebtReduced),
+      note: 'One-off balance',
+      success: h.agedDebtReduced > 0,
+      negative: h.agedDebtReduced < 0
+    }) +
+    tile({
+      label: 'Admin time released',
+      value: `${num0.format(releasedHours)} hrs/yr`,
+      note: `Worth ${money(h.capacityValue)}`,
+      success: releasedHours > 0,
+      negative: releasedHours < 0,
+      tip: 'timeReleased'
+    });
+
+  const daysChart = groupedBarChart({
+    title: 'Days to payment by insurer',
+    categories: r.perInsurer.map((i) => {
+      const d = roundedDelta(i.currentDays, i.effraDays, 0);
+      return { label: i.label, current: d.current, effra: d.effra };
+    }),
+    format: days
+  });
+
+  const billing = roundedDelta(r.current.byGroup.B.cost, r.effra.byGroup.B.cost, 0);
+  const front = roundedDelta(r.current.byGroup.F.cost, r.effra.byGroup.F.cost, 0);
+  const costChart = groupedBarChart({
+    title: 'Admin cost a month',
+    categories: [
+      { label: GROUP_LABELS.B, current: billing.current, effra: billing.effra },
+      { label: GROUP_LABELS.F, current: front.current, effra: front.effra },
+      { label: 'Total', current: billing.current + front.current, effra: billing.effra + front.effra }
+    ],
+    format: money
+  });
+
+  return (
+    `<div class="card card--success">` +
+    `<h2>With Effra</h2>` +
+    `<div class="tiles">${tiles}</div>` +
+    daysChart +
+    costChart +
+    `</div>`
+  );
+}
+
+function renderReleasedTime(r) {
+  const model = state.model;
+  const blocks = model.roles
+    .map((role) => {
+      const worked = r.current.byRole[role.key];
+      if (!worked || worked.minutes <= 0) return '';
+      const released = r.released[role.key];
+      const costModel = r.current.roleCosts[role.key];
+      const choice_ = model.timeChoices[role.key] || { mode: 'keep', hoursCut: '' };
+
+      if (!released || released.hoursReleased <= 0.01) {
+        const remaining = r.effra.activities
+          .filter((a) => a.role === role.key && a.cost > 0)
+          .sort((a, b) => b.cost - a.cost)
+          .slice(0, 2)
+          .map((a) => a.label.toLowerCase());
+        const list = remaining.length ? remaining.join(' and ') : 'their insurance admin';
+        return (
+          `<div class="role-block"><div class="role-block__head"><h4>${esc(role.label)}</h4></div>` +
+          `<p class="role-block__none">No time released. Their insurance tasks, such as ${esc(list)}, aren’t changed by Effra.</p>` +
+          `</div>`
+        );
+      }
+
+      const name = `choice-${role.key}`;
+      const reduceOpen = choice_.mode === 'reduce';
+      return (
+        `<div class="role-block">` +
+        `<div class="role-block__head"><h4>${esc(role.label)}</h4>` +
+        `<span class="role-block__hours">${esc(num0.format(released.hoursReleased))} hrs/yr released</span></div>` +
+        `<fieldset><legend class="visually-hidden">What ${esc(role.label)} does with the released time</legend>` +
+        `<div class="choice-list choice-list--inline">` +
+        choice({ name, value: 'keep', label: 'Keep for other work', checked: choice_.mode !== 'reduce' && choice_.mode !== 'remove', dataset: { choice: role.key } }) +
+        choice({ name, value: 'reduce', label: 'Reduce paid hours', checked: choice_.mode === 'reduce', dataset: { choice: role.key } }) +
+        choice({ name, value: 'remove', label: 'Remove this role', checked: choice_.mode === 'remove', dataset: { choice: role.key } }) +
+        `</div></fieldset>` +
+        (reduceOpen
+          ? field({
+              id: `hourscut-${role.key}`,
+              label: 'Paid hours cut per week',
+              value: choice_.hoursCut === undefined ? '' : choice_.hoursCut,
+              dataset: { hourscut: role.key }
+            })
+          : '') +
+        (choice_.mode === 'remove'
+          ? `<p class="role-block__helper">This role’s hours go to zero, for example by not replacing someone when they leave. ` +
+            `Removes ${esc(num0.format(costModel.contractedHours))} working hours and ${esc(money(costModel.employmentCost))} of cost a year.</p>`
+          : '') +
+        `</div>`
+      );
+    })
+    .join('');
+
+  const excess = r.cash.excess > 0
+    ? `<p class="cash-excess">${esc(money(r.cash.excess))} more comes from the staffing change itself, not from Effra.</p>`
+    : '';
+
+  return (
+    `<div class="card">` +
+    `<h2>What will you do with the released time?</h2>` +
+    `<p class="card__lead">Only time that reduces paid hours counts as a cash saving.</p>` +
+    blocks +
+    `<p class="cash-total">Cash saving credited to Effra: ${esc(money(r.cash.credited))}/yr</p>` +
+    excess +
+    `</div>`
+  );
+}
+
+function renderCurrentProcess(r) {
+  const tiles =
+    tile({ label: 'Admin cost a month', value: money(r.current.totals.cost) }) +
+    tile({ label: 'Staff hours a month', value: hours1(r.current.totals.minutes / 60) }) +
+    tile({ label: 'Cost per claim', value: moneyPrecise(r.ratios.costPerClaim) }) +
+    tile({ label: 'Cost per appointment', value: moneyPrecise(r.ratios.costPerAppointment) }) +
+    tile({ label: '% of insured revenue', value: percent(r.ratios.pctOfRevenue) }) +
+    tile({
+      label: 'Rework rate',
+      value: percent(r.ratios.reworkRate),
+      note: `With Effra: ${percent(r.ratios.effraReworkRate)}`
+    });
+
+  return `<div class="card"><h2>Your current process</h2><div class="tiles">${tiles}</div></div>`;
+}
+
+function renderBreakdownCharts(r) {
+  const byInsurer = state.model.insurers.map((i) => ({
+    label: i.label,
+    value: r.current.byInsurer[i.key] ? r.current.byInsurer[i.key].cost : 0
+  }));
+
+  const byActivity = r.current.activities
+    .slice()
+    .sort((a, b) => b.cost - a.cost)
+    .slice(0, 7)
+    .map((a) => ({ label: a.label, value: a.cost }));
+
+  const byRole = state.model.roles
+    .filter((role) => r.current.byRole[role.key] && r.current.byRole[role.key].cost > 0)
+    .map((role) => ({ label: role.label, value: r.current.byRole[role.key].cost }));
+
+  return (
+    `<div class="card"><h2>Where the cost sits</h2>` +
+    horizontalBarChart({ title: 'Cost a month by insurer', items: byInsurer, format: money, valueHeading: 'Cost a month' }) +
+    horizontalBarChart({ title: 'Cost a month by activity (top 7)', items: byActivity, format: money, valueHeading: 'Cost a month' }) +
+    horizontalBarChart({ title: 'Cost a month by staff role', items: byRole, format: money, valueHeading: 'Cost a month' }) +
+    `</div>`
+  );
+}
+
+function renderAssumptions() {
+  return `<details><summary>Assumptions</summary><p>${esc(ASSUMPTIONS_TEXT)}</p></details>`;
+}
+
+/* ---------- detailed assumptions panel ---------- */
+
+function renderDetailsPanel() {
+  const model = state.model;
+
+  const roleRows = model.roles
+    .map((role, index) => {
+      const cost = roleCost(role);
+      return (
+        `<tr>` +
+        `<td data-label="Role"><label class="visually-hidden" for="d-role-name-${index}">Role name</label>` +
+        `<input id="d-role-name-${index}" type="text" value="${esc(role.label)}" data-role-field="label" data-role-index="${index}"></td>` +
+        `<td data-label="Salary a year"><label class="visually-hidden" for="d-role-salary-${index}">Salary for ${esc(role.label)}</label>` +
+        `<input id="d-role-salary-${index}" type="number" inputmode="decimal" min="0" step="any" value="${esc(role.salary)}" data-role-field="salary" data-role-index="${index}">` +
+        `<p class="error" id="d-role-salary-${index}-error" aria-live="polite"></p></td>` +
+        `<td data-label="Hours a week"><label class="visually-hidden" for="d-role-hours-${index}">Weekly hours for ${esc(role.label)}</label>` +
+        `<input id="d-role-hours-${index}" type="number" inputmode="decimal" min="0" step="any" value="${esc(role.weeklyHours)}" data-role-field="weeklyHours" data-role-index="${index}">` +
+        `<p class="error" id="d-role-hours-${index}-error" aria-live="polite"></p></td>` +
+        `<td data-label="Hourly override"><label class="visually-hidden" for="d-role-override-${index}">Hourly override for ${esc(role.label)}</label>` +
+        `<input id="d-role-override-${index}" type="number" inputmode="decimal" min="0" step="any" value="${role.hourlyOverride === null ? '' : esc(role.hourlyOverride)}" data-role-field="hourlyOverride" data-role-index="${index}">` +
+        `<p class="error" id="d-role-override-${index}-error" aria-live="polite"></p></td>` +
+        `<td data-label="True hourly cost"><span id="d-role-hourly-${index}">${esc(moneyPrecise(cost.hourlyCost))}</span>` +
+        (cost.valid ? '' : `<p class="error">Productive hours must be above zero.</p>`) +
+        `</td></tr>`
+      );
+    })
+    .join('');
+
+  const rolesTable = scrollable('Roles',
+    `<table class="data-table"><caption>Roles</caption><thead><tr>` +
+    `<th scope="col">Role</th><th scope="col">Salary a year</th><th scope="col">Hours a week</th>` +
+    `<th scope="col">${tooltip('hourlyOverride', 'Hourly override')}</th><th scope="col">True hourly cost</th>` +
+    `</tr></thead><tbody>${roleRows}</tbody></table>`);
+
+  const insurerRows = model.insurers
+    .map((insurer, index) => {
+      const cells = [
+        ['appointments', 'Appointments', insurer.appointments, null],
+        ['courses', 'Courses', insurer.courses, null],
+        ['invoices', 'Invoices', insurer.invoices, null],
+        ['revenue', 'Revenue a month', insurer.revenue, null],
+        ['rejectionPct', 'Rejected %', insurer.rejectionPct, 100],
+        ['daysToPay', 'Days to pay', insurer.daysToPay, null],
+        ['writeOffsMonthly', 'Write-offs a month', insurer.writeOffsMonthly, null],
+        ['agedDebt', 'Aged debt', insurer.agedDebt, null]
+      ]
+        .map(([fieldName, label, value, max]) => {
+          const id = `d-ins-${index}-${fieldName}`;
+          return (
+            `<td data-label="${esc(label)}">` +
+            `<label class="visually-hidden" for="${id}">${esc(label)} for ${esc(insurer.label)}</label>` +
+            `<input id="${id}" type="number" inputmode="decimal" min="0" step="any" value="${esc(round4(value))}" ` +
+            `data-insurer-field="${fieldName}" data-insurer-index="${index}"${max ? ` data-max="${max}"` : ''}>` +
+            `<p class="error" id="${id}-error" aria-live="polite"></p></td>`
+          );
+        })
+        .join('');
+      return `<tr><th scope="row" data-label="Insurer">${esc(insurer.label)}</th>${cells}</tr>`;
+    })
+    .join('');
+
+  const insurersTable = scrollable('Per insurer',
+    `<table class="data-table"><caption>Per insurer</caption><thead><tr>` +
+    `<th scope="col">Insurer</th><th scope="col">Appointments</th>` +
+    `<th scope="col">${tooltip('courses', 'Courses')}</th><th scope="col">Invoices</th><th scope="col">Revenue a month</th>` +
+    `<th scope="col">${tooltip('rejectedPct', 'Rejected %')}</th><th scope="col">${tooltip('daysToPay', 'Days to pay')}</th>` +
+    `<th scope="col">${tooltip('writeOffs', 'Write-offs a month')}</th><th scope="col">${tooltip('agedDebt', 'Aged debt')}</th>` +
+    `</tr></thead><tbody>${insurerRows}</tbody></table>`);
+
+  const activityTable = (group) => {
+    const rows = model.activities
+      .map((activity, index) => ({ activity, index }))
+      .filter((entry) => entry.activity.group === group)
+      .map(({ activity, index }) => {
+        const isBatch = activity.type === 'batch';
+        const roleOptions =
+          `<option value="">— no one —</option>` +
+          model.roles
+            .map((role) => `<option value="${esc(role.key)}"${role.key === activity.role ? ' selected' : ''}>${esc(role.label)}</option>`)
+            .join('');
+        const idBase = `d-act-${index}`;
+        return (
+          `<tr><th scope="row" data-label="Activity">${esc(activity.label)}</th>` +
+          `<td data-label="Who"><label class="visually-hidden" for="${idBase}-role">Who does ${esc(activity.label)}</label>` +
+          `<select id="${idBase}-role" data-activity-field="role" data-activity-index="${index}">${roleOptions}</select></td>` +
+          `<td data-label="Basis">${esc(isBatch ? 'Batches a month' : BASIS_LABELS[activity.basis] || '')}</td>` +
+          `<td data-label="Incidence %">` +
+          (isBatch
+            ? '<span aria-hidden="true">—</span>'
+            : `<label class="visually-hidden" for="${idBase}-inc">Incidence % for ${esc(activity.label)}</label>` +
+              `<input id="${idBase}-inc" type="number" inputmode="decimal" min="0" max="100" step="any" value="${esc(round4(activity.incidence))}" data-activity-field="incidence" data-activity-index="${index}" data-max="100">` +
+              `<p class="error" id="${idBase}-inc-error" aria-live="polite"></p>`) +
+          `</td>` +
+          `<td data-label="${isBatch ? 'Batches' : 'Follow-ups'}">` +
+          `<label class="visually-hidden" for="${idBase}-rep">${isBatch ? 'Batches' : 'Follow-ups'} for ${esc(activity.label)}</label>` +
+          `<input id="${idBase}-rep" type="number" inputmode="decimal" min="0" step="any" value="${esc(round4(isBatch ? activity.batches : activity.followUps))}" data-activity-field="${isBatch ? 'batches' : 'followUps'}" data-activity-index="${index}">` +
+          `<p class="error" id="${idBase}-rep-error" aria-live="polite"></p></td>` +
+          `<td data-label="Minutes"><label class="visually-hidden" for="${idBase}-min">Minutes for ${esc(activity.label)}</label>` +
+          `<input id="${idBase}-min" type="number" inputmode="decimal" min="0" step="any" value="${esc(round4(activity.minutes))}" data-activity-field="minutes" data-activity-index="${index}">` +
+          `<p class="error" id="${idBase}-min-error" aria-live="polite"></p></td></tr>`
+        );
+      })
+      .join('');
+
+    return scrollable(GROUP_LABELS[group],
+      `<table class="data-table"><caption>${esc(GROUP_LABELS[group])}</caption><thead><tr>` +
+      `<th scope="col">Activity</th><th scope="col">Who</th><th scope="col">Basis</th>` +
+      `<th scope="col">${tooltip('incidence', 'Incidence %', group)}</th><th scope="col">${tooltip('followUps', 'Follow-ups', group)}</th>` +
+      `<th scope="col">Minutes</th></tr></thead><tbody>${rows}</tbody></table>`
+    );
+  };
+
+  return (
+    `<details id="details-panel" class="no-print"${state.detailsOpen ? ' open' : ''}>` +
+    `<summary>Edit detailed assumptions</summary>` +
+    `<p class="card__lead">Pre-filled from your answers. Changing your answers resets these edits.</p>` +
+    rolesTable +
+    insurersTable +
+    activityTable('B') +
+    activityTable('F') +
+    `</details>`
+  );
+}
+
+/** Wide tables scroll inside their own region rather than the whole page. */
+function scrollable(label, tableHtml) {
+  return `<div class="table-scroll" role="region" tabindex="0" aria-label="${esc(label)}">${tableHtml}</div>`;
+}
+
+function round4(value) {
+  if (value === null || value === undefined || value === '') return '';
+  return Math.round(Number(value) * 10000) / 10000;
+}
+
+/* ---------- top-level render ---------- */
+
+function render() {
+  const survey = document.getElementById('survey');
+  const results = document.getElementById('results');
+
+  if (state.view === 'survey') {
+    survey.hidden = false;
+    results.hidden = true;
+    survey.innerHTML = renderSurvey();
+  } else {
+    survey.hidden = true;
+    results.hidden = false;
+    document.getElementById('results-output').innerHTML = renderResults();
+    document.getElementById('details-host').innerHTML = renderDetailsPanel();
+  }
+  reportHeight();
+}
+
+/** Re-render only the results output, leaving the detailed panel's DOM alone. */
+function renderOutputOnly() {
+  document.getElementById('results-output').innerHTML = renderResults();
+  reportHeight();
+}
+
+function withFocusPreserved(fn) {
+  const active = document.activeElement;
+  const id = active && active.id ? active.id : null;
+  let caret = null;
+  if (active && active.type === 'text') {
+    try { caret = active.selectionStart; } catch (e) { caret = null; }
+  }
+  fn();
+  if (!id) return;
+  const next = document.getElementById(id);
+  if (!next) return;
+  next.focus({ preventScroll: true });
+  if (caret !== null && next.setSelectionRange) {
+    try { next.setSelectionRange(caret, caret); } catch (e) { /* not a text input */ }
+  }
+}
+
+/* ---------- validation of individual inputs ---------- */
+
+function readNumber(input) {
+  const raw = input.value;
+  const errorEl = document.getElementById(`${input.id}-error`);
+  const setError = (message) => {
+    if (errorEl) errorEl.textContent = message;
+    input.setAttribute('aria-invalid', message ? 'true' : 'false');
+    if (errorEl) input.setAttribute('aria-describedby', errorEl.id);
+  };
+
+  if (raw === '') {
+    setError('');
+    return { ok: false, empty: true, value: 0 };
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) {
+    setError('Enter a number of 0 or more.');
+    return { ok: false, empty: false, value: 0 };
+  }
+  const max = input.dataset.max ? Number(input.dataset.max) : null;
+  if (max !== null && value > max) {
+    setError('Percentages can’t be above 100%.');
+    return { ok: false, empty: false, value };
+  }
+  setError('');
+  return { ok: true, empty: false, value };
+}
+
+/* ---------- events ---------- */
+
+function onClick(event) {
+  const tipBtn = event.target.closest('[data-tip]');
+  if (tipBtn) {
+    toggleTip(tipBtn.dataset.tip);
+    withFocusPreserved(render);
+    return;
+  }
+
+  const button = event.target.closest('[data-action]');
+  if (!button) return;
+
+  switch (button.dataset.action) {
+    case 'next':
+      goNext();
+      break;
+    case 'back':
+      if (state.step > 0) {
+        state.step -= 1;
+        state.error = '';
+        render();
+      }
+      break;
+    case 'not-sure':
+      applyNotSure(state.answers, QUESTIONS[state.step].id);
+      state.error = '';
+      rebuildModel();
+      goNext(true);
+      break;
+    case 'edit-answers':
+      state.view = 'survey';
+      state.step = 0;
+      state.error = '';
+      render();
+      break;
+    case 'reset':
+      state.answers = demoAnswers();
+      state.step = 0;
+      state.view = 'survey';
+      state.error = '';
+      state.status = 'Example answers restored.';
+      rebuildModel();
+      render();
+      break;
+    case 'clear':
+      state.answers = blankAnswers();
+      state.step = 0;
+      state.view = 'survey';
+      state.error = '';
+      state.status = 'Example data cleared.';
+      rebuildModel();
+      render();
+      break;
+    case 'save':
+      save();
+      break;
+    case 'print':
+      window.print();
+      break;
+    case 'csv':
+      exportCsv();
+      break;
+    default:
+      break;
+  }
+}
+
+function goNext(skipValidation = false) {
+  const q = QUESTIONS[state.step];
+  if (!skipValidation) {
+    const error = validateQuestion(q.id, state.answers);
+    if (error) {
+      state.error = error;
+      render();
+      const errorEl = document.getElementById('survey-error');
+      if (errorEl) errorEl.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+  }
+  state.error = '';
+  if (state.step < QUESTIONS.length - 1) {
+    state.step += 1;
+    render();
+  } else {
+    rebuildModel();
+    state.view = 'results';
+    render();
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+}
+
+function onKeydown(event) {
+  if (event.key === 'Escape' && state.openTips.length) {
+    state.openTips = [];
+    withFocusPreserved(render);
+  }
+}
+
+/** Survey answer changes. */
+function onSurveyInput(event) {
+  const input = event.target;
+  const a = state.answers;
+  const key = input.dataset.answer;
+
+  if (input.dataset.rolesetting) {
+    const role = input.dataset.role;
+    if (!a.roleSettings[role]) a.roleSettings[role] = {};
+    a.roleSettings[role][input.dataset.rolesetting] = input.value;
+    readNumber(input);
+    return;
+  }
+  if (!key) return;
+
+  switch (key) {
+    case 'insurers': {
+      const value = input.value;
+      if (input.checked) {
+        if (!a.insurers.includes(value)) a.insurers.push(value);
+      } else {
+        a.insurers = a.insurers.filter((k) => k !== value);
+        delete a.appointments[value];
+        delete a.daysToPay[value];
+      }
+      withFocusPreserved(render);
+      return;
+    }
+    case 'appointments':
+      a.appointments[input.dataset.insurer] = input.value;
+      readNumber(input);
+      return;
+    case 'fee':
+      a.fee = input.value;
+      readNumber(input);
+      return;
+    case 'billingRoles': {
+      const value = input.value;
+      if (input.checked) {
+        if (!a.billingRoles.includes(value)) a.billingRoles.push(value);
+      } else {
+        a.billingRoles = a.billingRoles.filter((k) => k !== value);
+        if (a.exceptionRole === value) a.exceptionRole = '';
+      }
+      if (a.billingRoles.length === 1) a.exceptionRole = a.billingRoles[0];
+      withFocusPreserved(render);
+      return;
+    }
+    case 'exceptionRole':
+      a.exceptionRole = input.value;
+      withFocusPreserved(render);
+      return;
+    case 'frontRole':
+      a.frontRole = input.value;
+      withFocusPreserved(render);
+      return;
+    case 'daysToPay':
+      a.daysToPay[input.dataset.insurer] = input.value;
+      withFocusPreserved(render);
+      return;
+    case 'rejections':
+      a.rejections = input.value;
+      withFocusPreserved(render);
+      return;
+    case 'agedDebt':
+      a.agedDebt = input.value;
+      a.agedDebtNotSure = false;
+      readNumber(input);
+      return;
+    case 'writeOffs':
+      a.writeOffs = input.value;
+      withFocusPreserved(render);
+      return;
+    case 'effort': {
+      a.effort = Number(input.value);
+      const sense = document.getElementById('sense-check');
+      const valueLabel = document.getElementById('effort-value');
+      if (sense) {
+        sense.innerHTML =
+          `We estimate your team spends about <strong>${esc(num1.format(senseCheckHours()))} hours a week</strong> ` +
+          `on insurance billing, chasing and reconciling.`;
+      }
+      if (valueLabel) valueLabel.textContent = `Currently set to ${a.effort}% of our estimate.`;
+      return;
+    }
+    default:
+      return;
+  }
+}
+
+/** Results-page changes: released-time choices and the detailed panel. */
+function onResultsInput(event) {
+  const input = event.target;
+  const model = state.model;
+
+  if (input.dataset.choice) {
+    const roleKey = input.dataset.choice;
+    const existing = model.timeChoices[roleKey] || {};
+    model.timeChoices[roleKey] = { mode: input.value, hoursCut: existing.hoursCut || '' };
+    state.answers.timeChoices = model.timeChoices;
+    withFocusPreserved(renderOutputOnly);
+    return;
+  }
+
+  if (input.dataset.hourscut) {
+    const roleKey = input.dataset.hourscut;
+    const parsed = readNumber(input);
+    if (!parsed.ok && !parsed.empty) return;
+    const existing = model.timeChoices[roleKey] || { mode: 'reduce' };
+    model.timeChoices[roleKey] = { ...existing, hoursCut: parsed.empty ? '' : parsed.value };
+    state.answers.timeChoices = model.timeChoices;
+    withFocusPreserved(renderOutputOnly);
+    return;
+  }
+
+  if (input.dataset.roleIndex !== undefined && input.dataset.roleField) {
+    const role = model.roles[Number(input.dataset.roleIndex)];
+    const fieldName = input.dataset.roleField;
+    if (fieldName === 'label') {
+      role.label = input.value;
+    } else if (fieldName === 'hourlyOverride') {
+      const parsed = readNumber(input);
+      if (!parsed.ok && !parsed.empty) return;
+      role.hourlyOverride = parsed.empty ? null : parsed.value;
+    } else {
+      const parsed = readNumber(input);
+      if (!parsed.ok) return;
+      role[fieldName] = parsed.value;
+    }
+    const liveCost = document.getElementById(`d-role-hourly-${input.dataset.roleIndex}`);
+    if (liveCost) liveCost.textContent = moneyPrecise(roleCost(role).hourlyCost);
+    renderOutputOnly();
+    return;
+  }
+
+  if (input.dataset.insurerIndex !== undefined && input.dataset.insurerField) {
+    const parsed = readNumber(input);
+    if (!parsed.ok) return;
+    model.insurers[Number(input.dataset.insurerIndex)][input.dataset.insurerField] = parsed.value;
+    renderOutputOnly();
+    return;
+  }
+
+  if (input.dataset.activityIndex !== undefined && input.dataset.activityField) {
+    const activity = model.activities[Number(input.dataset.activityIndex)];
+    const fieldName = input.dataset.activityField;
+    if (fieldName === 'role') {
+      activity.role = input.value;
+    } else {
+      const parsed = readNumber(input);
+      if (!parsed.ok) return;
+      activity[fieldName] = parsed.value;
+    }
+    renderOutputOnly();
+  }
+}
+
+/* ---------- storage ---------- */
+
+function setStatus(message) {
+  state.status = message;
+  for (const el of document.querySelectorAll('.status')) el.textContent = message;
+}
+
+function save() {
+  try {
+    const payload = JSON.stringify({
+      schemaVersion: SCHEMA_VERSION,
+      answers: state.answers,
+      model: state.model,
+      view: state.view,
+      step: state.step
+    });
+    window.localStorage.setItem(STORAGE_KEY, payload);
+    setStatus('Saved in this browser.');
+  } catch (error) {
+    setStatus('Saving isn’t available in this browser');
+  }
+}
+
+function load() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.schemaVersion !== SCHEMA_VERSION || !parsed.answers) return false;
+    state.answers = parsed.answers;
+    state.model = parsed.model || buildModel(parsed.answers);
+    state.view = parsed.view === 'results' ? 'results' : 'survey';
+    state.step = Number.isInteger(parsed.step) ? Math.min(parsed.step, QUESTIONS.length - 1) : 0;
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/* ---------- CSV ---------- */
+
+function csvCell(value) {
+  const text = String(value === null || value === undefined ? '' : value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function exportCsv() {
+  const model = state.model;
+  const r = compute(model);
+  const rows = [
+    ['Section', 'Item', 'Detail', 'Value'],
+    ['Answers', 'Insurers', '', (state.answers.insurers || []).map(insurerLabel).join('; ')],
+    ['Answers', 'Average fee per session', '', model.fee]
+  ];
+
+  for (const insurer of model.insurers) {
+    rows.push(['Answers', 'Appointments a month', insurer.label, insurer.appointments]);
+    rows.push(['Answers', 'Days to pay', insurer.label, insurer.daysToPay]);
+  }
+  rows.push(['Answers', 'Rejection rate %', '', model.insurers.length ? model.insurers[0].rejectionPct : '']);
+  rows.push(['Answers', 'Sense-check multiplier %', '', Math.round(model.effort * 100)]);
+
+  for (const role of model.roles) {
+    const cost = roleCost(role);
+    rows.push(['Roles', role.label, 'Salary a year', cost.salary]);
+    rows.push(['Roles', role.label, 'Hours a week', cost.weeklyHours]);
+    rows.push(['Roles', role.label, 'True hourly cost', round4(cost.hourlyCost)]);
+    rows.push(['Roles', role.label, 'Employment cost a year', round4(cost.employmentCost)]);
+  }
+
+  rows.push(['Current process', 'Admin cost a month', '', round4(r.current.totals.cost)]);
+  rows.push(['Current process', 'Staff hours a month', '', round4(r.current.totals.minutes / 60)]);
+  rows.push(['Current process', 'Billing and payments hours a month', '', round4(r.current.byGroup.B.minutes / 60)]);
+  rows.push(['Current process', 'Front-end and clinical hours a month', '', round4(r.current.byGroup.F.minutes / 60)]);
+  rows.push(['Current process', 'Cost per claim', '', round4(r.ratios.costPerClaim)]);
+  rows.push(['Current process', 'Cost per appointment', '', round4(r.ratios.costPerAppointment)]);
+  rows.push(['Current process', '% of insured revenue', '', round4(r.ratios.pctOfRevenue * 100)]);
+  rows.push(['Current process', 'Rework rate %', '', round4(r.ratios.reworkRate * 100)]);
+  rows.push(['Current process', 'Average days to pay', '', round4(r.current.avgDaysToPay)]);
+  rows.push(['Current process', 'Aged debt balance', '', round4(r.current.agedDebt)]);
+
+  for (const activity of r.current.activities) {
+    rows.push(['Current activities', activity.label, 'Minutes a month', round4(activity.minutes)]);
+    rows.push(['Current activities', activity.label, 'Cost a month', round4(activity.cost)]);
+  }
+
+  rows.push(['With Effra', 'Admin cost a month', '', round4(r.effra.totals.cost)]);
+  rows.push(['With Effra', 'Staff hours a month', '', round4(r.effra.totals.minutes / 60)]);
+  rows.push(['With Effra', 'Average days to pay', '', round4(r.effra.avgDaysToPay)]);
+  rows.push(['With Effra', 'Rework rate %', '', round4(r.ratios.effraReworkRate * 100)]);
+  rows.push(['With Effra', 'Cash released by faster payment (one-off)', '', round4(r.headline.cashReleased)]);
+  rows.push(['With Effra', 'Write-offs recovered a year', '', round4(r.headline.writeOffsRecovered)]);
+  rows.push(['With Effra', 'Aged debt reduced (one-off)', '', round4(r.headline.agedDebtReduced)]);
+  rows.push(['With Effra', 'Admin hours released a year', '', round4(r.headline.releasedHoursTotal)]);
+  rows.push(['With Effra', 'Value of released time a year', '', round4(r.headline.capacityValue)]);
+  rows.push(['With Effra', 'Cash saving credited a year', '', round4(r.cash.credited)]);
+  rows.push(['With Effra', 'Excess from the staffing change', '', round4(r.cash.excess)]);
+
+  const csv = '﻿' + rows.map((row) => row.map(csvCell).join(',')).join('\r\n');
+  try {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'pmi-admin-cost-calculator.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setStatus('CSV downloaded.');
+  } catch (error) {
+    setStatus('Downloading isn’t available in this browser');
+  }
+}
+
+/* ---------- iframe height ---------- */
+
+let lastHeight = 0;
+function reportHeight() {
+  if (window.parent === window) return;
+  const height = Math.ceil(document.documentElement.scrollHeight);
+  if (height === lastHeight) return;
+  lastHeight = height;
+  try {
+    window.parent.postMessage({ type: 'pmi-calc-height', height }, '*');
+  } catch (error) {
+    /* embedding is optional */
+  }
+}
+
+/* ---------- boot ---------- */
+
+function init() {
+  if (!load()) rebuildModel();
+  if (!state.model) rebuildModel();
+
+  const app = document.querySelector('.app');
+  app.addEventListener('click', onClick);
+  document.addEventListener('keydown', onKeydown);
+  app.addEventListener('input', (event) => {
+    if (state.view === 'survey') onSurveyInput(event);
+    else onResultsInput(event);
+  });
+  app.addEventListener('change', (event) => {
+    if (event.target.tagName === 'SELECT' && state.view === 'results') onResultsInput(event);
+  });
+  document.getElementById('details-host').addEventListener('toggle', (event) => {
+    if (event.target.id === 'details-panel') state.detailsOpen = event.target.open;
+  }, true);
+
+  render();
+
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(reportHeight).observe(document.body);
+  }
+  window.addEventListener('load', reportHeight);
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+}
+})();
+</script>
+</body>
+</html>
