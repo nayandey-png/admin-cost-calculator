@@ -1184,7 +1184,13 @@ function exportCsv() {
 let lastHeight = 0;
 function reportHeight() {
   if (window.parent === window) return;
-  const height = Math.ceil(document.documentElement.scrollHeight);
+  // Measure the body box, not documentElement.scrollHeight: the latter is
+  // bounded below by the iframe's own height, so once the host grows the frame
+  // the reported height can only ever ratchet upwards and never shrink back.
+  const box = document.body.getBoundingClientRect();
+  const styles = window.getComputedStyle(document.body);
+  const margins = (parseFloat(styles.marginTop) || 0) + (parseFloat(styles.marginBottom) || 0);
+  const height = Math.ceil(box.height + margins);
   if (height === lastHeight) return;
   lastHeight = height;
   try {
