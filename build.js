@@ -11,7 +11,11 @@ const src = join(root, 'src');
 const out = join(root, 'dist', 'calculator.html');
 const framerOut = join(root, 'dist', 'framer', 'PMICalculator.tsx');
 
-const INITIAL_HEIGHT = 1400;
+// Every visitor lands on question 1, so start near the survey's own height: the
+// page then loads at the right size and only grows once they ask for results.
+const INITIAL_HEIGHT = 700;
+// Framer's canvas placeholder, before the component reports its real height.
+const INTRINSIC_HEIGHT = 1400;
 const BASE64_LINE_LENGTH = 180;
 
 // Dependency order: later modules may use earlier ones.
@@ -86,7 +90,7 @@ function decodeHtml(): string {
  * @framerSupportedLayoutWidth fixed
  * @framerSupportedLayoutHeight auto
  * @framerIntrinsicWidth 1000
- * @framerIntrinsicHeight ${INITIAL_HEIGHT}
+ * @framerIntrinsicHeight ${INTRINSIC_HEIGHT}
  */
 export default function PMICalculator(props: { style?: CSSProperties }) {
     const iframeRef = useRef<HTMLIFrameElement>(null)

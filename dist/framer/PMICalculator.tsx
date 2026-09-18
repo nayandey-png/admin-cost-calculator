@@ -750,7 +750,7 @@ const HTML_BASE64 = [
     "TG9hZGVkJywgaW5pdCk7CiAgZWxzZSBpbml0KCk7Cn0KfSkoKTsKPC9zY3JpcHQ+CjwvYm9keT4KPC9odG1sPgo=",
 ].join("")
 
-const INITIAL_HEIGHT = 1400
+const INITIAL_HEIGHT = 700
 
 // Runs on mount only, so the server render never touches browser globals.
 function decodeHtml(): string {

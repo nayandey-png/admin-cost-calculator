@@ -221,9 +221,25 @@ into an `<iframe srcDoc={...}>`. There's deliberately no `sandbox` attribute: a 
 iframe without one inherits the parent page's origin, which is what keeps Save
 (`localStorage`) and Export CSV working. A `message` listener accepts height updates only
 when `event.source` matches the iframe's own `contentWindow`, so another embed on the same
-page can't resize it. It starts at 1400px and settles to the real height once the
-calculator reports in — expect it to drop to roughly 640px on the first survey screen,
-then grow to around 3000px on the results.
+page can't resize it.
+
+**Initial height** is 700px, chosen to match question 1 rather than the results, because
+that is what every visitor loads first. Measured settle heights on the first survey screen:
+
+| Viewport | Settles at | Jump on load |
+|---|---|---|
+| 1440 / 1280 / 1024 | 638px | −62px, slight shrink |
+| 768 | 663px | −37px, imperceptible |
+| 430 | 766px | +66px, slight grow |
+| 390 | 980px | +280px, grow |
+| 320 | 1085px | +385px, grow |
+
+So desktop and tablet load at essentially the right height. Phones start short and grow,
+because the survey stacks taller at narrow widths — a grow reads as the page settling,
+where a shrink reads as a glitch. After that every change is user-initiated: around
+2990px on the results, 5158px with the detailed panel open, and back to 2990px when it is
+collapsed. `@framerIntrinsicHeight` stays at 1400, which only sets the placeholder size on
+Framer's canvas and has no effect at runtime.
 
 Base64 rather than an escaped template literal: the inlined calculator script is itself
 full of template literals — 458 backticks and 210 `${` sequences — so escaping would mean
@@ -354,6 +370,8 @@ dialogue.
       has exactly one export and imports only from `react`.
 - [ ] Framer component in a browser: the srcdoc frame reports `window.parent !== window`,
       inherits the page origin, auto-heights, and Save and Export CSV both still work.
+- [ ] Framer component loads the survey at its real height with no visible shrink on
+      desktop, and Save survives a page reload.
 - [ ] `PMICalculator.tsx` decodes byte-for-byte back to `dist/calculator.html`, so the two
       builds can't drift.
 
