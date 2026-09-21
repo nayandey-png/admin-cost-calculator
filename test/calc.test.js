@@ -125,6 +125,38 @@ test('a stated aged debt total is split by revenue share', () => {
   }
 });
 
+test('a typed aged-debt amount feeds the calculation, not the estimate', () => {
+  const answers = { ...demoAnswers(), agedDebt: 12000, agedDebtNotSure: false };
+  const model = buildModel(answers);
+  const total = model.insurers.reduce((s, i) => s + i.agedDebt, 0);
+
+  close(total, 12000, 1e-9);
+  // Bupa is 45 days, so the estimate would have been revenue x 15 / 30, not this.
+  const bupa = model.insurers.find((i) => i.key === 'bupa');
+  const estimate = (bupa.revenue * (45 - 30)) / 30;
+  assert.ok(Math.abs(bupa.agedDebt - estimate) > 1, 'a typed amount must not fall back to the estimate');
+  close(bupa.agedDebt, 12000 * (bupa.revenue / model.insurers.reduce((s, i) => s + i.revenue, 0)), 1e-9);
+});
+
+test('an aged-debt amount of zero is still a real answer, not Not sure', () => {
+  const model = buildModel({ ...demoAnswers(), agedDebt: 0, agedDebtNotSure: false });
+  close(model.insurers.reduce((s, i) => s + i.agedDebt, 0), 0);
+});
+
+test('clicking Not sure clears any typed amount and restores the estimate', () => {
+  const answers = { ...demoAnswers(), agedDebt: 12000, agedDebtNotSure: false };
+  close(buildModel(answers).insurers.reduce((s, i) => s + i.agedDebt, 0), 12000, 1e-9);
+
+  applyNotSure(answers, 'agedDebt');
+  assert.equal(answers.agedDebt, '');
+  assert.equal(answers.agedDebtNotSure, true);
+
+  const model = buildModel(answers);
+  for (const insurer of model.insurers) {
+    close(insurer.agedDebt, (insurer.revenue * Math.max(0, insurer.daysToPay - 30)) / 30, 1e-9);
+  }
+});
+
 /* 5. Derived volumes */
 
 test('courses, invoices and revenue derive from appointments and the fee', () => {
@@ -306,24 +338,41 @@ test('keep releases no cash, reduce is pro rata and remove is the full cost', ()
   close(cashForChoice({ mode: 'reduce', hoursCut: 5 }, rec), (5 / 37.5) * rec.employmentCost, 1e-9);
 });
 
-test('credited cash is capped at the capacity value and the excess is reported', () => {
+test('the cash total is the full staffing change, not capped at capacity', () => {
   const model = buildModel({ ...demoAnswers(), timeChoices: { pm: { mode: 'remove' } } });
   const results = compute(model);
-  const requested = results.current.roleCosts.pm.employmentCost;
+  const full = results.current.roleCosts.pm.employmentCost;
 
-  close(results.cash.requested, requested, 1e-9);
-  assert.ok(requested > results.headline.capacityValue, 'removing a practice manager should exceed capacity');
-  close(results.cash.credited, results.headline.capacityValue, 1e-9);
-  close(results.cash.excess, requested - results.headline.capacityValue, 1e-9);
-  close(results.cash.credited + results.cash.excess, results.cash.requested, 1e-9);
+  assert.ok(full > results.headline.capacityValue, 'removing a practice manager should exceed capacity');
+  close(results.cash.total, full, 1e-9);
+  close(results.cash.byRole.pm, full, 1e-9);
 });
 
-test('a small reduction is credited in full with no excess', () => {
+test('a small reduction gives its own value', () => {
   const model = buildModel({ ...demoAnswers(), timeChoices: { pm: { mode: 'reduce', hoursCut: 0.5 } } });
   const results = compute(model);
-  assert.ok(results.cash.requested < results.headline.capacityValue);
-  close(results.cash.credited, results.cash.requested, 1e-9);
-  close(results.cash.excess, 0, 1e-9);
+  const rec = results.current.roleCosts.pm;
+  assert.ok(results.cash.total < results.headline.capacityValue);
+  close(results.cash.total, (0.5 * 52 * rec.employmentCost) / rec.contractedHours, 1e-9);
+});
+
+test('the cash total sums every role choice', () => {
+  const model = buildModel({
+    ...demoAnswers(),
+    timeChoices: { rec: { mode: 'reduce', hoursCut: 2 }, pm: { mode: 'remove' } }
+  });
+  const results = compute(model);
+  const recCost = results.current.roleCosts.rec;
+  const expected =
+    (2 * 52 * recCost.employmentCost) / recCost.contractedHours +
+    results.current.roleCosts.pm.employmentCost;
+  close(results.cash.total, expected, 1e-9);
+  close(results.cash.byRole.rec + results.cash.byRole.pm, results.cash.total, 1e-9);
+});
+
+test('keeping the released time gives a zero total', () => {
+  const results = compute(buildModel({ ...demoAnswers(), timeChoices: { pm: { mode: 'keep' } } }));
+  close(results.cash.total, 0);
 });
 
 /* 13. Rounding */

@@ -429,16 +429,15 @@ export function compute(model) {
   const cashReleased =
     ((current.revenue * F) / CONSTANTS.daysPerYear) * (current.avgDaysToPay - effra.avgDaysToPay);
 
-  // Released time turns into cash only where paid hours actually fall.
-  let cashRequested = 0;
+  // Released time turns into cash only where paid hours actually fall. The
+  // total is whatever the staffing choices add up to, uncapped.
+  let cashTotal = 0;
   const cashByRole = {};
   for (const role of model.roles) {
     const amount = cashForChoice(model.timeChoices[role.key], current.roleCosts[role.key]);
     cashByRole[role.key] = amount;
-    cashRequested += amount;
+    cashTotal += amount;
   }
-  const cashCredited = Math.min(cashRequested, Math.max(capacityValue, 0));
-  const excess = cashRequested - cashCredited;
 
   const perInsurer = model.insurers.map((insurer, index) => {
     const benchmark = effraBenchmark(insurer.key);
@@ -470,7 +469,7 @@ export function compute(model) {
       billingHoursReleasedMonthly: (current.byGroup.B.minutes - effra.byGroup.B.minutes) / 60
     },
     released: releasedByRole,
-    cash: { byRole: cashByRole, requested: cashRequested, credited: cashCredited, excess },
+    cash: { byRole: cashByRole, total: cashTotal },
     ratios: {
       costPerClaim: current.invoices > 0 ? current.totals.cost / current.invoices : 0,
       costPerAppointment: current.appointments > 0 ? current.totals.cost / current.appointments : 0,

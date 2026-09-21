@@ -1,4 +1,4 @@
-/* ui.js — rendering, events, tooltips, CSV and print. */
+/* ui.js — rendering, events, tooltips, CSV and the printable report. */
 
 import {
   ROLE_DEFAULTS,
@@ -13,7 +13,7 @@ import {
   TOOLTIPS,
   CONSTANTS
 } from './defaults.js';
-import { buildModel, compute, roleCost, roundedDelta } from './calc.js';
+import { buildModel, compute, roleCost, roundedDelta, toNumber } from './calc.js';
 import {
   QUESTIONS,
   demoAnswers,
@@ -22,9 +22,11 @@ import {
   validateQuestion,
   frontRoleOptions
 } from './survey.js';
-import { groupedBarChart, horizontalBarChart, escapeHtml } from './charts.js';
+import { groupedBarChart, escapeHtml } from './charts.js';
 
 const esc = escapeHtml;
+
+const CASH_TOTAL_LABEL = 'Cash saving from your staffing changes with Effra';
 
 /* ---------- formatting ---------- */
 
@@ -82,14 +84,20 @@ function toggleTip(key) {
 
 /* ---------- small html helpers ---------- */
 
-function field({ id, label, value, type = 'number', hint = '', min = 0, step = 'any', suffix = '', dataset = {} }) {
+function field({ id, label, value, type = 'number', hint = '', min = 0, step = 'any', suffix = '', labelHidden = false, dataset = {} }) {
   const attrs = Object.entries(dataset)
     .map(([k, v]) => ` data-${k}="${esc(v)}"`)
     .join('');
+  // A hidden label still names the input, so the hint moves out on its own.
+  const describedBy = labelHidden && hint ? `${esc(id)}-hint ${esc(id)}-error` : `${esc(id)}-error`;
+  const labelHtml = labelHidden
+    ? `<label class="visually-hidden" for="${esc(id)}">${esc(label)}</label>` +
+      (hint ? `<span class="field__hint" id="${esc(id)}-hint">${esc(hint)}</span>` : '')
+    : `<label for="${esc(id)}">${esc(label)}${hint ? `<span class="field__hint">${esc(hint)}</span>` : ''}</label>`;
   return (
     `<div class="field">` +
-    `<label for="${esc(id)}">${esc(label)}${hint ? `<span class="field__hint">${esc(hint)}</span>` : ''}</label>` +
-    `<input id="${esc(id)}" type="${type}" inputmode="decimal" min="${min}" step="${step}" value="${esc(value)}" aria-describedby="${esc(id)}-error"${attrs}>` +
+    labelHtml +
+    `<input id="${esc(id)}" type="${type}" inputmode="decimal" min="${min}" step="${step}" value="${esc(value)}" aria-describedby="${describedBy}"${attrs}>` +
     (suffix ? `<span class="field__hint">${esc(suffix)}</span>` : '') +
     `<p class="error" id="${esc(id)}-error" aria-live="polite"></p>` +
     `</div>`
@@ -295,6 +303,7 @@ function renderQuestion(index) {
           label: 'Total owed, over 30 days late',
           value: a.agedDebtNotSure ? '' : a.agedDebt,
           hint: 'In pounds. Leave it to us if you’re not sure.',
+          labelHidden: true,
           dataset: { answer: 'agedDebt' }
         }) +
         (a.agedDebtNotSure ? `<p class="note">We’ll estimate this from how long each insurer takes to pay.</p>` : '')
@@ -361,7 +370,7 @@ function renderSurvey() {
     `<p class="question__helper">${esc(q.helper)}</p>` +
     `<div id="question-body">${renderQuestion(index)}</div>` +
     `<p class="error" id="survey-error" role="alert">${esc(state.error)}</p>` +
-    `<div class="button-row button-row--split">` +
+    `<div class="button-row button-row--split question-actions">` +
     `<div class="button-row">` +
     `<button type="button" class="btn btn--quiet" data-action="back"${index === 0 ? ' disabled' : ''}>Back</button>` +
     (q.notSure ? `<button type="button" class="btn btn--secondary" data-action="not-sure">Not sure</button>` : '') +
@@ -391,7 +400,6 @@ function renderResults() {
     renderEffraCard(r, daysDelta) +
     renderReleasedTime(r) +
     renderCurrentProcess(r) +
-    renderBreakdownCharts(r) +
     renderAssumptions() +
     (r.excludedActivities > 0
       ? `<p class="note">${r.excludedActivities} ${r.excludedActivities === 1 ? 'activity has' : 'activities have'} no one assigned, so ${r.excludedActivities === 1 ? 'it is' : 'they are'} left out of these figures.</p>`
@@ -533,24 +541,19 @@ function renderReleasedTime(r) {
           : '') +
         (choice_.mode === 'remove'
           ? `<p class="role-block__helper">This role’s hours go to zero, for example by not replacing someone when they leave. ` +
-            `Removes ${esc(num0.format(costModel.contractedHours))} working hours and ${esc(money(costModel.employmentCost))} of cost a year.</p>`
+            `Removes ${esc(num0.format(costModel.contractedHours))} paid hours and ${esc(money(costModel.employmentCost))} of cost a year.</p>`
           : '') +
         `</div>`
       );
     })
     .join('');
 
-  const excess = r.cash.excess > 0
-    ? `<p class="cash-excess">${esc(money(r.cash.excess))} more comes from the staffing change itself, not from Effra.</p>`
-    : '';
-
   return (
     `<div class="card">` +
     `<h2>What will you do with the released time?</h2>` +
     `<p class="card__lead">Only time that reduces paid hours counts as a cash saving.</p>` +
     blocks +
-    `<p class="cash-total">Cash saving credited to Effra: ${esc(money(r.cash.credited))}/yr</p>` +
-    excess +
+    `<p class="cash-total">${esc(CASH_TOTAL_LABEL)}: ${esc(money(r.cash.total))}/yr</p>` +
     `</div>`
   );
 }
@@ -569,31 +572,6 @@ function renderCurrentProcess(r) {
     });
 
   return `<div class="card"><h2>Your current process</h2><div class="tiles">${tiles}</div></div>`;
-}
-
-function renderBreakdownCharts(r) {
-  const byInsurer = state.model.insurers.map((i) => ({
-    label: i.label,
-    value: r.current.byInsurer[i.key] ? r.current.byInsurer[i.key].cost : 0
-  }));
-
-  const byActivity = r.current.activities
-    .slice()
-    .sort((a, b) => b.cost - a.cost)
-    .slice(0, 7)
-    .map((a) => ({ label: a.label, value: a.cost }));
-
-  const byRole = state.model.roles
-    .filter((role) => r.current.byRole[role.key] && r.current.byRole[role.key].cost > 0)
-    .map((role) => ({ label: role.label, value: r.current.byRole[role.key].cost }));
-
-  return (
-    `<div class="card"><h2>Where the cost sits</h2>` +
-    horizontalBarChart({ title: 'Cost a month by insurer', items: byInsurer, format: money, valueHeading: 'Cost a month' }) +
-    horizontalBarChart({ title: 'Cost a month by activity (top 7)', items: byActivity, format: money, valueHeading: 'Cost a month' }) +
-    horizontalBarChart({ title: 'Cost a month by staff role', items: byRole, format: money, valueHeading: 'Cost a month' }) +
-    `</div>`
-  );
 }
 
 function renderAssumptions() {
@@ -859,8 +837,8 @@ function onClick(event) {
       rebuildModel();
       render();
       break;
-    case 'print':
-      window.print();
+    case 'pdf':
+      saveResultsAsPdf();
       break;
     case 'csv':
       exportCsv();
@@ -965,11 +943,16 @@ function onSurveyInput(event) {
       a.rejections = input.value;
       withFocusPreserved(render);
       return;
-    case 'agedDebt':
+    case 'agedDebt': {
       a.agedDebt = input.value;
+      // Typing an amount replaces the estimate, so the "we'll estimate this"
+      // note has to go. Only re-render on the transition, not every keystroke.
+      const wasNotSure = a.agedDebtNotSure;
       a.agedDebtNotSure = false;
       readNumber(input);
+      if (wasNotSure) withFocusPreserved(render);
       return;
+    }
     case 'writeOffs':
       a.writeOffs = input.value;
       withFocusPreserved(render);
@@ -1121,8 +1104,7 @@ function exportCsv() {
   rows.push(['With Effra', 'Aged debt reduced (one-off)', '', round4(r.headline.agedDebtReduced)]);
   rows.push(['With Effra', 'Admin hours released a year', '', round4(r.headline.releasedHoursTotal)]);
   rows.push(['With Effra', 'Value of released time a year', '', round4(r.headline.capacityValue)]);
-  rows.push(['With Effra', 'Cash saving credited a year', '', round4(r.cash.credited)]);
-  rows.push(['With Effra', 'Excess from the staffing change', '', round4(r.cash.excess)]);
+  rows.push(['With Effra', CASH_TOTAL_LABEL + ' a year', '', round4(r.cash.total)]);
 
   const csv = '﻿' + rows.map((row) => row.map(csvCell).join(',')).join('\r\n');
   try {
@@ -1139,6 +1121,236 @@ function exportCsv() {
   } catch (error) {
     setStatus('Downloading isn’t available in this browser');
   }
+}
+
+/* ---------- printable report ---------- */
+
+const REPORT_STYLES = `
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 12pt; line-height: 1.45; color: #000; background: #fff;
+  }
+  .report { max-width: 48rem; margin: 0 auto; }
+  h1 { font-size: 20pt; margin: 0 0 4px; }
+  h2 { font-size: 14pt; margin: 22px 0 8px; border-bottom: 2px solid #000; padding-bottom: 3px; }
+  h3 { font-size: 12pt; margin: 14px 0 6px; }
+  p { margin: 0 0 8px; }
+  .meta { color: #333; font-size: 10pt; margin-bottom: 14px; }
+  .lead { font-size: 12.5pt; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 11pt; }
+  caption { text-align: left; font-weight: 700; padding-bottom: 4px; }
+  th, td { text-align: left; border: 1px solid #000; padding: 5px 7px; vertical-align: top; }
+  thead th { background: #e8e8e8; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tbody th { font-weight: 600; width: 45%; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .total { font-size: 13pt; font-weight: 700; border: 2px solid #000; padding: 8px 10px; margin: 8px 0 4px; }
+  .assumptions { font-size: 10pt; }
+  .disclaimer { font-size: 9.5pt; color: #333; border-top: 1px solid #000; padding-top: 8px; margin-top: 18px; }
+  @page { margin: 14mm; }
+  @media print {
+    body { padding: 0; }
+    h2, table, .total { break-inside: avoid; }
+    h2 { break-after: avoid; }
+  }
+`;
+
+function reportTable(caption, rows, headers) {
+  const head = headers
+    ? `<thead><tr>${headers.map((h, i) => `<th scope="col"${i ? ' class="num"' : ''}>${esc(h)}</th>`).join('')}</tr></thead>`
+    : '';
+  const body = rows
+    .map((row) => {
+      const cells = row.slice(1).map((c) => `<td class="num">${esc(c)}</td>`).join('');
+      return `<tr><th scope="row">${esc(row[0])}</th>${cells}</tr>`;
+    })
+    .join('');
+  return `<table><caption>${esc(caption)}</caption>${head}<tbody>${body}</tbody></table>`;
+}
+
+function optionLabel(options, key, fallback) {
+  const found = options.find((o) => o.key === key);
+  return found ? found.label : fallback;
+}
+
+/** A standalone, self-contained document — no styles or scripts from this page. */
+function buildReportHtml() {
+  const a = state.answers;
+  const model = state.model;
+  const r = compute(model);
+
+  const totalCost = roundedDelta(r.current.totals.cost, r.effra.totals.cost, 0);
+  const daysDelta = roundedDelta(r.current.avgDaysToPay, r.effra.avgDaysToPay, 0);
+  const billing = roundedDelta(r.current.byGroup.B.cost, r.effra.byGroup.B.cost, 0);
+  const front = roundedDelta(r.current.byGroup.F.cost, r.effra.byGroup.F.cost, 0);
+
+  const printedOn = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const answersIntro = reportTable('Your answers', [
+    ['Average fee per insured session', money(model.fee)],
+    ['How often claims are rejected', `${optionLabel(REJECTION_OPTIONS, a.rejections, 'Not sure')} (${num1.format(model.insurers.length ? model.insurers[0].rejectionPct : 0)}% of claims)`],
+    ['Insurer debt over 30 days late', a.agedDebtNotSure ? 'Not sure — estimated from payment times' : money(r.current.agedDebt)],
+    ['Insured income written off a year', optionLabel(WRITE_OFF_OPTIONS, a.writeOffs, 'Not sure')],
+    ['Sense-check adjustment', `${num0.format(model.effort * 100)}% of our estimate`]
+  ]);
+
+  const insurerRows = model.insurers.map((insurer) => [
+    insurer.label,
+    num0.format(insurer.appointments),
+    optionLabel(DAYS_TO_PAY_OPTIONS, (a.daysToPay || {})[insurer.key], `${num0.format(insurer.daysToPay)} days`)
+  ]);
+
+  const roleRows = model.roles.map((role) => {
+    const cost = roleCost(role);
+    return [
+      role.label,
+      cost.hourlyOverride === null ? money(cost.salary) : '—',
+      num1.format(cost.weeklyHours),
+      cost.hourlyOverride === null ? '—' : moneyPrecise(cost.hourlyOverride),
+      moneyPrecise(cost.hourlyCost)
+    ];
+  });
+
+  const currentRows = [
+    ['Admin cost a month', money(r.current.totals.cost)],
+    ['Staff hours a month', hours1(r.current.totals.minutes / 60)],
+    ['Cost per claim', moneyPrecise(r.ratios.costPerClaim)],
+    ['Cost per appointment', moneyPrecise(r.ratios.costPerAppointment)],
+    ['% of insured revenue', percent(r.ratios.pctOfRevenue)],
+    ['Rework rate', `${percent(r.ratios.reworkRate)} (with Effra: ${percent(r.ratios.effraReworkRate)})`]
+  ];
+
+  const effraRows = [
+    ['Cash released by faster payment (one-off)', money(r.headline.cashReleased)],
+    ['Write-offs recovered (per year)', money(r.headline.writeOffsRecovered)],
+    ['Aged debt reduced (one-off)', money(r.headline.agedDebtReduced)],
+    ['Admin time released (per year)', `${num0.format(r.headline.releasedHoursTotal)} hrs, worth ${money(r.headline.capacityValue)}`]
+  ];
+
+  const daysRows = r.perInsurer.map((insurer) => {
+    const d = roundedDelta(insurer.currentDays, insurer.effraDays, 0);
+    return [insurer.label, days(d.current), days(d.effra), days(d.difference)];
+  });
+
+  const costRows = [
+    [GROUP_LABELS.B, money(billing.current), money(billing.effra), money(billing.difference)],
+    [GROUP_LABELS.F, money(front.current), money(front.effra), money(front.difference)],
+    ['Total', money(billing.current + front.current), money(billing.effra + front.effra), money(billing.difference + front.difference)]
+  ];
+
+  const timeRows = model.roles
+    .filter((role) => r.current.byRole[role.key] && r.current.byRole[role.key].minutes > 0)
+    .map((role) => {
+      const released = r.released[role.key];
+      const choice_ = model.timeChoices[role.key] || { mode: 'keep' };
+      let decision = 'Keep for other work';
+      if (choice_.mode === 'reduce') decision = `Reduce paid hours by ${num1.format(toNumber(choice_.hoursCut, 0))} a week`;
+      if (choice_.mode === 'remove') decision = 'Remove this role';
+      const hoursReleased = released ? released.hoursReleased : 0;
+      return [
+        role.label,
+        hoursReleased > 0.01 ? `${num0.format(hoursReleased)} hrs` : 'None',
+        hoursReleased > 0.01 ? decision : 'No time released',
+        money(r.cash.byRole[role.key] || 0)
+      ];
+    });
+
+  return (
+    `<!DOCTYPE html><html lang="en-GB"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width, initial-scale=1">` +
+    `<title>PMI admin cost calculator — your results</title>` +
+    `<style>${REPORT_STYLES}</style></head><body><div class="report">` +
+    `<h1>PMI admin cost calculator</h1>` +
+    `<p class="meta">Your results, prepared ${esc(printedOn)}.</p>` +
+    `<p class="lead">Your clinic spends about <strong>${esc(money(totalCost.current))}</strong> and ` +
+    `<strong>${esc(hours(r.current.totals.minutes / 60))}</strong> of staff time a month administering insured work. ` +
+    `With Effra, insurers would pay you about <strong>${esc(days(daysDelta.difference))}</strong> sooner, and ` +
+    `<strong>${esc(hours1(r.headline.billingHoursReleasedMonthly))}</strong> of billing and payment work a month ` +
+    `would be done for you.</p>` +
+
+    `<h2>Your answers</h2>` +
+    reportTable('Insurers', insurerRows, ['Insurer', 'Appointments a month', 'Time to pay']) +
+    answersIntro +
+    reportTable('Who does the work', roleRows, ['Role', 'Salary a year', 'Hours a week', 'Hourly override', 'True hourly cost']) +
+
+    `<h2>Your current process</h2>` +
+    reportTable('Current process', currentRows) +
+
+    `<h2>With Effra</h2>` +
+    reportTable('Headline effects', effraRows) +
+    reportTable('Days to payment by insurer', daysRows, ['Insurer', 'Now', 'With Effra', 'Sooner by']) +
+    reportTable('Admin cost a month', costRows, ['', 'Now', 'With Effra', 'Difference']) +
+
+    `<h2>What you’ll do with the released time</h2>` +
+    `<p>Only time that reduces paid hours counts as a cash saving.</p>` +
+    reportTable('Released time', timeRows, ['Role', 'Released a year', 'Your choice', 'Cash a year']) +
+    `<p class="total">${esc(CASH_TOTAL_LABEL)}: ${esc(money(r.cash.total))}/yr</p>` +
+
+    `<h2>Assumptions</h2>` +
+    `<p class="assumptions">${esc(ASSUMPTIONS_TEXT)}</p>` +
+    `<p class="disclaimer">Estimates for planning only. Not accounting, tax or employment advice.</p>` +
+    `</div></body></html>`
+  );
+}
+
+/**
+ * Open the report in a new tab and raise the print dialog, so the user can
+ * pick "Save as PDF". Printing the calculator itself is unreliable once it is
+ * embedded in an iframe, which is why the report is its own document.
+ */
+function saveResultsAsPdf() {
+  const html = buildReportHtml();
+  let tab = null;
+  try {
+    tab = window.open('', '_blank');
+  } catch (error) {
+    tab = null;
+  }
+
+  if (tab && tab.document) {
+    tab.document.open();
+    tab.document.write(html);
+    tab.document.close();
+    const raise = () => {
+      try {
+        tab.focus();
+        tab.print();
+      } catch (error) {
+        /* the user can still print the tab by hand */
+      }
+    };
+    if (tab.document.readyState === 'complete') setTimeout(raise, 100);
+    else tab.addEventListener('load', raise);
+    setStatus('Report opened in a new tab. Choose “Save as PDF”.');
+    return;
+  }
+
+  printReportInPlace(html);
+}
+
+/** Popup blocked: print the report from a hidden frame on this page instead. */
+function printReportInPlace(html) {
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.setAttribute('title', 'Printable report');
+  frame.style.cssText = 'position:absolute;left:-10000px;top:0;width:1px;height:1px;border:0';
+  frame.srcdoc = html;
+  frame.addEventListener('load', () => {
+    const view = frame.contentWindow;
+    if (!view) return;
+    const clean = () => frame.remove();
+    view.addEventListener('afterprint', clean);
+    setTimeout(clean, 60000);
+    try {
+      view.focus();
+      view.print();
+    } catch (error) {
+      clean();
+    }
+  });
+  document.body.appendChild(frame);
+  setStatus('Opening the print dialog. Choose “Save as PDF”.');
 }
 
 /* ---------- iframe height ---------- */

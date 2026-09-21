@@ -116,6 +116,8 @@ a { color: var(--colour-accent-dark); }
 
 .button-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 .button-row--split { justify-content: space-between; }
+/* Same breathing room above the Back / Not sure / Next row on every question. */
+.question-actions { margin-top: 1rem; }
 
 /* ---------- survey ---------- */
 
@@ -272,8 +274,6 @@ legend { font-weight: 600; color: var(--colour-heading); padding: 0; margin-bott
 .chart__group { margin-bottom: 0.85rem; }
 .chart__group-label { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.2rem; }
 .chart__row { display: grid; grid-template-columns: 6.5rem 1fr; gap: 0.5rem; align-items: center; margin-bottom: 0.25rem; }
-.chart--labels-wide .chart__row { grid-template-columns: 14rem 1fr; margin-bottom: 0.4rem; }
-.chart--labels-wide .chart__row-label { color: var(--colour-text); }
 .chart__row-label { font-size: 0.85rem; color: var(--colour-text-muted); }
 .chart__track {
   background: var(--colour-surface-muted);
@@ -331,7 +331,6 @@ legend { font-weight: 600; color: var(--colour-heading); padding: 0; margin-bott
 .role-block__none { color: var(--colour-text-muted); margin: 0.3rem 0 0; }
 .role-block__helper { font-size: 0.9rem; color: var(--colour-text-muted); margin: 0.3rem 0 0; }
 .cash-total { font-size: 1.15rem; font-weight: 700; color: var(--colour-heading); margin-top: 1rem; }
-.cash-excess { color: var(--colour-text-muted); font-size: 0.92rem; margin-top: 0.25rem; }
 
 details { border: 1px solid var(--colour-border); border-radius: var(--radius); padding: 0.75rem 1rem; margin-bottom: 1.25rem; background: var(--colour-surface); }
 details > summary { font-weight: 600; color: var(--colour-heading); cursor: pointer; min-height: 32px; }
@@ -348,7 +347,6 @@ details[open] > summary { margin-bottom: 0.75rem; }
   h1 { font-size: 1.35rem; }
   .card { padding: 1rem; }
   .chart__row { grid-template-columns: 4.5rem 1fr; }
-  .chart--labels-wide .chart__row { grid-template-columns: 1fr; gap: 0.1rem; }
 
   .table-scroll { overflow-x: visible; }
   .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; }

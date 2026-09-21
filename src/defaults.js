@@ -148,7 +148,7 @@ export function effraBenchmark(insurerKey) {
 }
 
 export const ASSUMPTIONS_TEXT =
-  "The Effra scenario uses average outcomes across 1000+ practitioners using Effra: rejection rates, payment times, write-offs and aged debt by insurer. Aviva, WPA and other insurers use Effra's Vitality results, as there's no insurer-specific data yet. Billing and payment tasks are automated, with about 5 minutes a month left for reviewing exceptions. Front-end and clinical admin is unchanged. Assumes around 5 sessions per insured course of treatment, based on Effra clinics. Hourly cost = (salary + employer NI + pension) ÷ productive hours; leave is 5.6 weeks pro rata including bank holidays and sickness is 2% of contracted hours. Released time isn't a cash saving unless paid hours are reduced; credited cash is capped at the value of released time.";
+  "The Effra scenario uses average outcomes across 1000+ practitioners using Effra: rejection rates, payment times, write-offs and aged debt by insurer. Aviva, WPA and other insurers use Effra's Vitality results, as there's no insurer-specific data yet. Billing and payment tasks are automated, with about 5 minutes a month left for reviewing exceptions. Front-end and clinical admin is unchanged. Assumes around 5 sessions per insured course of treatment, based on Effra clinics. Hourly cost = (salary + employer NI + pension) ÷ productive hours; leave is 5.6 weeks pro rata including bank holidays and sickness is 2% of contracted hours. Released time isn't a cash saving unless paid hours are reduced.";
 
 export const TOOLTIPS = {
   courses: 'One patient’s treatment under one insurer authorisation. For example, six authorised knee physio sessions count as one course.',

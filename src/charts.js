@@ -91,22 +91,3 @@ export function groupedBarChart({ title, categories, currentLabel = 'Now', effra
     `</figure>`
   );
 }
-
-/**
- * Plain horizontal bars.
- * items: [{ label, value }]
- */
-export function horizontalBarChart({ title, items, format, valueHeading = 'Value' }) {
-  const id = nextId('chart');
-  const max = items.reduce((m, i) => Math.max(m, Math.abs(i.value)), 0);
-  const rows = items.map((item) => bar(item.value, max, format, item.label, 'chart__bar--plain')).join('');
-  const table = hiddenTable(title, ['', valueHeading], items.map((i) => [i.label, format(i.value)]));
-
-  return (
-    `<figure class="chart chart--labels-wide" role="group" aria-labelledby="${id}-title">` +
-    `<figcaption class="chart__title" id="${id}-title">${escapeHtml(title)}</figcaption>` +
-    rows +
-    table +
-    `</figure>`
-  );
-}
