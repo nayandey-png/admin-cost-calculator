@@ -333,13 +333,6 @@ details { border: 1px solid var(--colour-border); border-radius: var(--radius); 
 details > summary { font-weight: 600; color: var(--colour-heading); cursor: pointer; min-height: 32px; }
 details[open] > summary { margin-bottom: 0.75rem; }
 
-.privacy {
-  font-size: 0.92rem; color: var(--colour-text-muted);
-  background: var(--colour-surface-muted);
-  border: 1px solid var(--colour-border);
-  border-radius: var(--radius-sm);
-  padding: 0.6rem 0.8rem; margin-bottom: 1rem;
-}
 .footer { font-size: 0.85rem; color: var(--colour-text-muted); border-top: 1px solid var(--colour-border); padding-top: 0.85rem; margin-top: 1.5rem; }
 
 .status { min-height: 1.5rem; font-size: 0.92rem; color: var(--colour-success); font-weight: 600; }
@@ -378,7 +371,7 @@ details[open] > summary { margin-bottom: 0.75rem; }
 @media print {
   :root { --shadow: none; }
   body { padding: 0; font-size: 11pt; color: #000; }
-  .no-print, .privacy, #survey, .button-row, .tip-btn, .status { display: none !important; }
+  .no-print, #survey, .button-row, .tip-btn, .status { display: none !important; }
   .card, .role-block, details, .tile { break-inside: avoid; border: 1px solid #666; box-shadow: none; background: #fff !important; }
   .tile--success, .card--success { background: #fff !important; }
   .tile__value, .tile--success .tile__value, h1, h2, h3 { color: #000; }

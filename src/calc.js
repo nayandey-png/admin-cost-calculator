@@ -208,7 +208,6 @@ export function buildModel(answers) {
   });
 
   return {
-    schemaVersion: 1,
     fee,
     effort,
     slots,

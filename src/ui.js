@@ -1,4 +1,4 @@
-/* ui.js — rendering, events, tooltips, storage, CSV and print. */
+/* ui.js — rendering, events, tooltips, CSV and print. */
 
 import {
   ROLE_DEFAULTS,
@@ -24,8 +24,6 @@ import {
 } from './survey.js';
 import { groupedBarChart, horizontalBarChart, escapeHtml } from './charts.js';
 
-const STORAGE_KEY = 'pmiCalc.v1';
-const SCHEMA_VERSION = 1;
 const esc = escapeHtml;
 
 /* ---------- formatting ---------- */
@@ -373,7 +371,6 @@ function renderSurvey() {
     `<div class="button-row no-print">` +
     `<button type="button" class="btn btn--quiet" data-action="reset">Reset</button>` +
     `<button type="button" class="btn btn--quiet" data-action="clear">Clear example data</button>` +
-    `<button type="button" class="btn btn--quiet" data-action="save">Save</button>` +
     `<span class="status" role="status">${esc(state.status)}</span>` +
     `</div>`
   );
@@ -862,9 +859,6 @@ function onClick(event) {
       rebuildModel();
       render();
       break;
-    case 'save':
-      save();
-      break;
     case 'print':
       window.print();
       break;
@@ -1064,43 +1058,11 @@ function onResultsInput(event) {
   }
 }
 
-/* ---------- storage ---------- */
+/* ---------- status line ---------- */
 
 function setStatus(message) {
   state.status = message;
   for (const el of document.querySelectorAll('.status')) el.textContent = message;
-}
-
-function save() {
-  try {
-    const payload = JSON.stringify({
-      schemaVersion: SCHEMA_VERSION,
-      answers: state.answers,
-      model: state.model,
-      view: state.view,
-      step: state.step
-    });
-    window.localStorage.setItem(STORAGE_KEY, payload);
-    setStatus('Saved in this browser.');
-  } catch (error) {
-    setStatus('Saving isn’t available in this browser');
-  }
-}
-
-function load() {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    if (!parsed || parsed.schemaVersion !== SCHEMA_VERSION || !parsed.answers) return false;
-    state.answers = parsed.answers;
-    state.model = parsed.model || buildModel(parsed.answers);
-    state.view = parsed.view === 'results' ? 'results' : 'survey';
-    state.step = Number.isInteger(parsed.step) ? Math.min(parsed.step, QUESTIONS.length - 1) : 0;
-    return true;
-  } catch (error) {
-    return false;
-  }
 }
 
 /* ---------- CSV ---------- */
@@ -1203,8 +1165,7 @@ function reportHeight() {
 /* ---------- boot ---------- */
 
 export function init() {
-  if (!load()) rebuildModel();
-  if (!state.model) rebuildModel();
+  rebuildModel();
 
   const app = document.querySelector('.app');
   app.addEventListener('click', onClick);

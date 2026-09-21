@@ -13,7 +13,7 @@ const framerOut = join(root, 'dist', 'framer', 'PMICalculator.tsx');
 
 // Every visitor lands on question 1, so start near the survey's own height: the
 // page then loads at the right size and only grows once they ask for results.
-const INITIAL_HEIGHT = 700;
+const INITIAL_HEIGHT = 570;
 // Framer's canvas placeholder, before the component reports its real height.
 const INTRINSIC_HEIGHT = 1400;
 const BASE64_LINE_LENGTH = 180;

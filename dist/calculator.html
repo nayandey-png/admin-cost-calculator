@@ -342,13 +342,6 @@ details { border: 1px solid var(--colour-border); border-radius: var(--radius); 
 details > summary { font-weight: 600; color: var(--colour-heading); cursor: pointer; min-height: 32px; }
 details[open] > summary { margin-bottom: 0.75rem; }
 
-.privacy {
-  font-size: 0.92rem; color: var(--colour-text-muted);
-  background: var(--colour-surface-muted);
-  border: 1px solid var(--colour-border);
-  border-radius: var(--radius-sm);
-  padding: 0.6rem 0.8rem; margin-bottom: 1rem;
-}
 .footer { font-size: 0.85rem; color: var(--colour-text-muted); border-top: 1px solid var(--colour-border); padding-top: 0.85rem; margin-top: 1.5rem; }
 
 .status { min-height: 1.5rem; font-size: 0.92rem; color: var(--colour-success); font-weight: 600; }
@@ -387,7 +380,7 @@ details[open] > summary { margin-bottom: 0.75rem; }
 @media print {
   :root { --shadow: none; }
   body { padding: 0; font-size: 11pt; color: #000; }
-  .no-print, .privacy, #survey, .button-row, .tip-btn, .status { display: none !important; }
+  .no-print, #survey, .button-row, .tip-btn, .status { display: none !important; }
   .card, .role-block, details, .tile { break-inside: avoid; border: 1px solid #666; box-shadow: none; background: #fff !important; }
   .tile--success, .card--success { background: #fff !important; }
   .tile__value, .tile--success .tile__value, h1, h2, h3 { color: #000; }
@@ -411,7 +404,6 @@ details[open] > summary { margin-bottom: 0.75rem; }
   <header>
     <h1>PMI admin cost calculator</h1>
     <p>Work out what insured-patient admin costs your clinic today, and what changes with Effra. Nine quick questions and a sense check.</p>
-    <p class="privacy">Don&rsquo;t enter patient-identifiable information. Everything stays in this browser.</p>
   </header>
 
   <main>
@@ -423,7 +415,6 @@ details[open] > summary { margin-bottom: 0.75rem; }
       <div class="button-row no-print">
         <button type="button" class="btn btn--secondary" data-action="print">Print results</button>
         <button type="button" class="btn btn--secondary" data-action="csv">Export CSV</button>
-        <button type="button" class="btn btn--secondary" data-action="save">Save</button>
         <button type="button" class="btn btn--quiet" data-action="reset">Reset</button>
         <button type="button" class="btn btn--quiet" data-action="clear">Clear example data</button>
         <span class="status" role="status"></span>
@@ -432,7 +423,7 @@ details[open] > summary { margin-bottom: 0.75rem; }
   </main>
 
   <footer class="footer">
-    <p>Estimates for planning only. Not accounting, tax or employment advice. Employer NI (15% above &pound;5,000) and pension (3% of qualifying earnings) are 2026/27 defaults and can change.</p>
+    <p>Estimates for planning only. Not accounting, tax or employment advice.</p>
   </footer>
 </div>
 <script>
@@ -795,7 +786,6 @@ function buildModel(answers) {
   });
 
   return {
-    schemaVersion: 1,
     fee,
     effort,
     slots,
@@ -1351,13 +1341,11 @@ function horizontalBarChart({ title, items, format, valueHeading = 'Value' }) {
 }
 
 /* ---- ui.js ---- */
-/* ui.js — rendering, events, tooltips, storage, CSV and print. */
+/* ui.js — rendering, events, tooltips, CSV and print. */
 
 
 
 
-const STORAGE_KEY = 'pmiCalc.v1';
-const SCHEMA_VERSION = 1;
 const esc = escapeHtml;
 
 /* ---------- formatting ---------- */
@@ -1705,7 +1693,6 @@ function renderSurvey() {
     `<div class="button-row no-print">` +
     `<button type="button" class="btn btn--quiet" data-action="reset">Reset</button>` +
     `<button type="button" class="btn btn--quiet" data-action="clear">Clear example data</button>` +
-    `<button type="button" class="btn btn--quiet" data-action="save">Save</button>` +
     `<span class="status" role="status">${esc(state.status)}</span>` +
     `</div>`
   );
@@ -2194,9 +2181,6 @@ function onClick(event) {
       rebuildModel();
       render();
       break;
-    case 'save':
-      save();
-      break;
     case 'print':
       window.print();
       break;
@@ -2396,43 +2380,11 @@ function onResultsInput(event) {
   }
 }
 
-/* ---------- storage ---------- */
+/* ---------- status line ---------- */
 
 function setStatus(message) {
   state.status = message;
   for (const el of document.querySelectorAll('.status')) el.textContent = message;
-}
-
-function save() {
-  try {
-    const payload = JSON.stringify({
-      schemaVersion: SCHEMA_VERSION,
-      answers: state.answers,
-      model: state.model,
-      view: state.view,
-      step: state.step
-    });
-    window.localStorage.setItem(STORAGE_KEY, payload);
-    setStatus('Saved in this browser.');
-  } catch (error) {
-    setStatus('Saving isn’t available in this browser');
-  }
-}
-
-function load() {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    if (!parsed || parsed.schemaVersion !== SCHEMA_VERSION || !parsed.answers) return false;
-    state.answers = parsed.answers;
-    state.model = parsed.model || buildModel(parsed.answers);
-    state.view = parsed.view === 'results' ? 'results' : 'survey';
-    state.step = Number.isInteger(parsed.step) ? Math.min(parsed.step, QUESTIONS.length - 1) : 0;
-    return true;
-  } catch (error) {
-    return false;
-  }
 }
 
 /* ---------- CSV ---------- */
@@ -2535,8 +2487,7 @@ function reportHeight() {
 /* ---------- boot ---------- */
 
 function init() {
-  if (!load()) rebuildModel();
-  if (!state.model) rebuildModel();
+  rebuildModel();
 
   const app = document.querySelector('.app');
   app.addEventListener('click', onClick);
