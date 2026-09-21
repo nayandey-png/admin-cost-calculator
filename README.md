@@ -223,15 +223,15 @@ working. A `message` listener accepts height updates only
 when `event.source` matches the iframe's own `contentWindow`, so another embed on the same
 page can't resize it.
 
-**Initial height** is 570px, chosen to match question 1 rather than the results, because
+**Initial height** is 585px, chosen to match question 1 rather than the results, because
 that is what every visitor loads first. Measured settle heights on the first survey screen:
 
 | Viewport | Settles at | Jump on load |
 |---|---|---|
-| 1280 | 561px | −9px, invisible |
-| 768 | 586px | +16px, invisible |
-| 390 | 859px | +289px, grow |
-| 320 | 884px | +314px, grow |
+| 1280 | 585px | 0px, none |
+| 768 | 610px | +25px, invisible |
+| 390 | 883px | +298px, grow |
+| 320 | 908px | +323px, grow |
 
 So desktop and tablet load at essentially the right height. Phones start short and grow,
 because the survey stacks taller at narrow widths — a grow reads as the page settling,
@@ -249,7 +249,7 @@ a global transform over 97 kB where one missed sequence produces silently corrup
 that only surfaces at runtime. Base64's alphabet can't collide with a string delimiter, an
 interpolation or a closing script tag. It costs a third more bytes and one decode at mount.
 
-**File size.** `PMICalculator.tsx` is **136 kB over 801 lines**, of which about 133 kB is
+**File size.** `PMICalculator.tsx` is **136 kB over 802 lines**, of which about 133 kB is
 the base64 payload. That payload is split across roughly 740 lines of 180 characters
 rather than one enormous line, which is what usually makes code editors stutter. Framer's
 editor is a Monaco-style editor and a file this size is large but not extreme; I have not

@@ -119,6 +119,10 @@ a { color: var(--colour-accent-dark); }
 
 /* ---------- survey ---------- */
 
+/* The intro paragraph's own bottom margin is zeroed by p:last-child, so the
+   breathing room above the progress label lives here. */
+#survey { margin-top: 1.5rem; }
+
 .progress { margin-bottom: 1.25rem; }
 .progress__label {
   display: flex; justify-content: space-between; gap: 0.5rem;
